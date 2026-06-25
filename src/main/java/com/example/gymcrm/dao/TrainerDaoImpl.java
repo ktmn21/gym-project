@@ -26,21 +26,23 @@ public class TrainerDaoImpl implements TrainerDao{
     }
 
     @Override
-    public void save(Trainer trainer) {
+    public Trainer save(Trainer trainer) {
 
         Long id = idSequence.incrementAndGet();
         trainer.setUserId(id);
         storage.put(id, trainer);
         log.debug("saved the trainer with id: {}", id);
+        return trainer;
 
     }
 
     @Override
-    public void update(Trainer trainer) {
+    public Trainer update(Trainer trainer) {
 
         storage.put(trainer.getUserId(), trainer);
         log.debug("Updated the trainer with id: {}", trainer.getUserId());
 
+        return trainer;
     }
 
     @Override
