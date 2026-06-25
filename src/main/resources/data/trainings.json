@@ -6,7 +6,7 @@
     "trainingName": "Morning Yoga",
     "trainingType": "YOGA",
     "trainingDate": "2024-06-01",
-    "trainingDurationMinutes": 60
+    "trainingDuration": 60
   },
   {
     "id": 202,
@@ -15,6 +15,6 @@
     "trainingName": "Power Lifting Basics",
     "trainingType": "STRENGTH",
     "trainingDate": "2024-06-02",
-    "trainingDurationMinutes": 90
+    "trainingDuration": 90
   }
 ]

@@ -14,10 +14,9 @@ public class Training {
     public Training() {
     }
 
-    public Training(Long id, Long traineeId, Long trainerId,
+    public Training(Long traineeId, Long trainerId,
                     String trainingName, TrainingType trainingType,
                     LocalDate trainingDate, Integer trainingDuration) {
-        this.id = id;
         this.traineeId = traineeId;
         this.trainerId = trainerId;
         this.trainingName = trainingName;
@@ -25,6 +24,7 @@ public class Training {
         this.trainingDate = trainingDate;
         this.trainingDuration = trainingDuration;
     }
+
 
     public Long getId() {
         return id;

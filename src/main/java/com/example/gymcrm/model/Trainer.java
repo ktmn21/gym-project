@@ -15,6 +15,11 @@ public class Trainer extends User {
         this.specialization = specialization;
     }
 
+    public Trainer(String firstName, String lastName, TrainingType specializationId) {
+        super(firstName, lastName);
+        this.specialization = specializationId;
+    }
+
     public Long getUserId() {
         return userId;
     }

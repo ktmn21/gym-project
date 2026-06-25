@@ -4,6 +4,7 @@ import com.example.gymcrm.model.Training;
 import com.example.gymcrm.storage.InMemoryStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ public class TrainingDaoImpl implements TrainingDao{
     private final AtomicLong idSequence = new AtomicLong();
     private Map<Long, Training> storage;
 
+    @Autowired
     public void setStorage(InMemoryStorage inMemoryStorage){
         this.storage = inMemoryStorage.getTrainingStorage();
     }
