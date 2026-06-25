@@ -26,17 +26,19 @@ public class TraineeDaoImpl implements TraineeDao {
     }
 
     @Override
-    public void save(Trainee trainee) {
+    public Trainee save(Trainee trainee) {
         Long id = idSequence.incrementAndGet();
         trainee.setUserId(id);
         storage.put(id, trainee);
         log.debug("Saved trainee with id: {} and username: {}", id, trainee.getUsername());
+        return trainee;
     }
 
     @Override
-    public void update(Trainee trainee) {
+    public Trainee update(Trainee trainee) {
         storage.put(trainee.getUserId(), trainee);
         log.debug("Updated trainee with id: {}", trainee.getUserId());
+        return trainee;
     }
 
     @Override
