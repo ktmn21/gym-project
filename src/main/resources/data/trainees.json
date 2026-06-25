@@ -1,0 +1,22 @@
+[
+  {
+    "userId": 101,
+    "firstName": "Charlie",
+    "lastName": "Brown",
+    "username": "Charlie.Brown",
+    "password": "SeedPass101",
+    "active": true,
+    "dateOfBirth": "1998-03-22",
+    "address": "45 Oak Avenue"
+  },
+  {
+    "userId": 102,
+    "firstName": "Diana",
+    "lastName": "Prince",
+    "username": "Diana.Prince",
+    "password": "SeedPass102",
+    "active": true,
+    "dateOfBirth": "2000-11-05",
+    "address": "88 Elm Street"
+  }
+]

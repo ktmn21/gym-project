@@ -3,9 +3,10 @@ package com.example.gymcrm.storage;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
-import com.example.gymcrm.model.TrainingType;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -16,8 +17,14 @@ public class InMemoryStorage {
 
     private final Logger log = LoggerFactory.getLogger(InMemoryStorage.class);
 
-    private String trainerSeedPath;
-    private String traineeSeedPath;
+    @Value("${storage.seed.trainers}")
+    private String trainersSeedPath;
+
+    @Value("${storage.seed.trainees}")
+    private String traineesSeedPath;
+
+    @Value("${storage.seed.trainings}")
+    private String trainingsSeedPath;
 
 
     private final Map<Long, Trainee> traineeStorage = new HashMap<>();
@@ -34,6 +41,21 @@ public class InMemoryStorage {
 
     public Map<Long, Training> getTrainingStorage() {
         return trainingStorage;
+    }
+
+    private final StorageSeedLoader seedLoader;
+    public InMemoryStorage(StorageSeedLoader storageSeedLoader){
+        this.seedLoader = storageSeedLoader;
+    }
+
+    @PostConstruct
+    public void initializeStorage() {
+        log.info("Initializing in-memory storage from seed files...");
+        seedLoader.loadTrainers(trainersSeedPath, trainerStorage);
+        seedLoader.loadTrainees(traineesSeedPath, traineeStorage);
+        seedLoader.loadTrainings(trainingsSeedPath, trainingStorage);
+        log.info("Storage initialized: {} trainers, {} trainees, {} trainings",
+                trainerStorage.size(), traineeStorage.size(), trainingStorage.size());
     }
 
 }
