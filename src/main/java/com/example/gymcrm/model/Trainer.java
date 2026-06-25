@@ -2,14 +2,14 @@ package com.example.gymcrm.model;
 
 public class Trainer extends User {
     private Long userId;
-    private String specialization;
+    private Long specialization;
 
     public Trainer() {
     }
 
     public Trainer(Long userId, String firstName, String lastName,
                    String username, String password, boolean active,
-                   String specialization) {
+                   Long specialization) {
         super(firstName, lastName, username, password, active);
         this.userId = userId;
         this.specialization = specialization;
@@ -23,11 +23,11 @@ public class Trainer extends User {
         this.userId = userId;
     }
 
-    public String getSpecialization() {
+    public Long getSpecialization() {
         return specialization;
     }
 
-    public void setSpecialization(String specialization) {
+    public void setSpecialization(Long specialization) {
         this.specialization = specialization;
     }
 }
