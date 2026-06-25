@@ -1,6 +1,7 @@
 package com.example.gymcrm.dao;
 
 import com.example.gymcrm.model.Trainer;
+import com.example.gymcrm.model.TrainingType;
 import com.example.gymcrm.storage.InMemoryStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +44,7 @@ class TrainerDaoImplTest {
         trainer.setUsername("john.smith");
         trainer.setPassword("pass123456");
         trainer.setActive(true);
-        trainer.setSpecialization(1L);
+        trainer.setSpecialization(TrainingType.BOXING);
 
         trainerDao.save(trainer);
 
@@ -62,11 +63,11 @@ class TrainerDaoImplTest {
         trainer.setUsername("alice.brown");
         trainer.setPassword("pass123456");
         trainer.setActive(true);
-        trainer.setSpecialization(1L);
+        trainer.setSpecialization(TrainingType.BOXING);
 
         trainerDao.save(trainer);
 
-        trainer.setSpecialization(2L);
+        trainer.setSpecialization(TrainingType.CARDIO);
         trainer.setActive(false);
         trainerDao.update(trainer);
 
@@ -83,7 +84,7 @@ class TrainerDaoImplTest {
         trainer.setUsername("bob.taylor");
         trainer.setPassword("pass123456");
         trainer.setActive(true);
-        trainer.setSpecialization(3L);
+        trainer.setSpecialization(TrainingType.PILATES);
 
         trainerDao.save(trainer);
 
@@ -110,7 +111,7 @@ class TrainerDaoImplTest {
         trainer.setUsername("emma.stone");
         trainer.setPassword("pass123456");
         trainer.setActive(true);
-        trainer.setSpecialization(4L);
+        trainer.setSpecialization(TrainingType.STRENGTH);
 
         trainerDao.save(trainer);
 
@@ -136,7 +137,7 @@ class TrainerDaoImplTest {
         trainer1.setUsername("tom.hardy");
         trainer1.setPassword("pass123456");
         trainer1.setActive(true);
-        trainer1.setSpecialization(1L);
+        trainer1.setSpecialization(TrainingType.CARDIO);
 
         Trainer trainer2 = new Trainer();
         trainer2.setFirstName("Sara");
@@ -144,7 +145,7 @@ class TrainerDaoImplTest {
         trainer2.setUsername("sara.lee");
         trainer2.setPassword("pass123456");
         trainer2.setActive(true);
-        trainer2.setSpecialization(2L);
+        trainer2.setSpecialization(TrainingType.CARDIO);
 
         trainerDao.save(trainer1);
         trainerDao.save(trainer2);

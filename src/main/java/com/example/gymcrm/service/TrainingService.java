@@ -37,7 +37,7 @@ public class TrainingService {
         return saved;
     }
 
-    public List<Training> electAllTrainings(){
+    public List<Training> selectAllTrainings(){
         log.info("Selecting all Trainings");
         return trainingDao.findAll();
     }

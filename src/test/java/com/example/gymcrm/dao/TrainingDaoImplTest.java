@@ -31,7 +31,7 @@ class TrainingDaoImplTest {
                 10L,           // traineeId
                 20L,           // trainerId
                 "Morning Cardio",
-                new TrainingType(),   // trainingType (simple instance)
+                TrainingType.CARDIO,
                 LocalDate.of(2024, 1, 10),
                 60               // duration
         );
@@ -64,7 +64,7 @@ class TrainingDaoImplTest {
                 1L,
                 2L,
                 "Java Basics",
-                new TrainingType(),
+                TrainingType.CARDIO,
                 LocalDate.of(2024, 2, 15),
                 90
         );
@@ -74,7 +74,7 @@ class TrainingDaoImplTest {
                 3L,
                 4L,
                 "Spring Core",
-                new TrainingType(),
+                TrainingType.CARDIO,
                 LocalDate.of(2024, 3, 20),
                 120
         );

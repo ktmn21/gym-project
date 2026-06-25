@@ -2,6 +2,7 @@ package com.example.gymcrm.service;
 
 import com.example.gymcrm.dao.TrainerDao;
 import com.example.gymcrm.model.Trainer;
+import com.example.gymcrm.model.TrainingType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ class TrainerServiceTest {
         Trainer trainer = new Trainer();
         trainer.setFirstName("John");
         trainer.setLastName("Smith");
-        trainer.setSpecialization(1L);
+        trainer.setSpecialization(TrainingType.CARDIO);
 
         when(usernamePasswordGenerator.generateUserName("John", "Smith"))
                 .thenReturn("John.Smith");
@@ -63,7 +64,7 @@ class TrainerServiceTest {
         savedFromDao.setUsername("John.Smith");
         savedFromDao.setPassword("securePass123");
         savedFromDao.setActive(true);
-        savedFromDao.setSpecialization(1L);
+        savedFromDao.setSpecialization(TrainingType.CARDIO);
         when(trainerDao.save(any(Trainer.class))).thenReturn(savedFromDao);
 
         Trainer result = trainerService.createTrainer(trainer);
@@ -120,12 +121,12 @@ class TrainerServiceTest {
         existing.setLastName("Brown");
         existing.setUsername("Alice.Brown");
         existing.setActive(true);
-        existing.setSpecialization(1L);
+        existing.setSpecialization(TrainingType.CARDIO);
 
         when(trainerDao.findById(5L)).thenReturn(Optional.of(existing));
         when(trainerDao.update(any(Trainer.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        existing.setSpecialization(2L);
+        existing.setSpecialization(TrainingType.BOXING);
         existing.setActive(false);
 
         Trainer result = trainerService.updateTrainer(existing);
@@ -133,7 +134,7 @@ class TrainerServiceTest {
         verify(trainerDao).findById(5L);
         verify(trainerDao).update(existing);
 
-        assertEquals(2L, result.getSpecialization());
+        assertEquals(TrainingType.BOXING, result.getSpecialization());
         assertFalse(result.isActive());
     }
 

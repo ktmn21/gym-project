@@ -101,7 +101,7 @@ class TrainingServiceTest {
     }
 
     @Test
-    @DisplayName("electAllTrainings: returns all trainings from DAO")
+    @DisplayName("selectAllTrainings: returns all trainings from DAO")
     void electAllTrainings_returnsAll() {
         Training t1 = new Training();
         t1.setId(1L);
@@ -110,7 +110,7 @@ class TrainingServiceTest {
 
         when(trainingDao.findAll()).thenReturn(List.of(t1, t2));
 
-        List<Training> result = trainingService.electAllTrainings();
+        List<Training> result = trainingService.selectAllTrainings();
 
         assertEquals(2, result.size());
         assertEquals(1L, result.get(0).getId());
