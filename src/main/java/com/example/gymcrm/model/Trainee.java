@@ -19,6 +19,12 @@ public class Trainee extends User {
         this.address = address;
     }
 
+    public Trainee(String firstName, String lastName, LocalDate dateOfBirth, String address) {
+        super(firstName, lastName);
+        this.dateOfBirth = dateOfBirth;
+        this.address = address;
+    }
+
     public Long getUserId() {
         return userId;
     }

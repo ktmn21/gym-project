@@ -1,0 +1,20 @@
+[
+  {
+    "userId": 1,
+    "firstName": "Alice",
+    "lastName": "Walker",
+    "username": "Alice.Walker",
+    "password": "SeedPass001",
+    "active": true,
+    "specialization": "YOGA"
+  },
+  {
+    "userId": 2,
+    "firstName": "Bob",
+    "lastName": "Stone",
+    "username": "Bob.Stone",
+    "password": "SeedPass002",
+    "active": true,
+    "specialization": "STRENGTH"
+  }
+]
