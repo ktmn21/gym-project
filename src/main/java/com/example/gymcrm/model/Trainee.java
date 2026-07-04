@@ -1,51 +1,51 @@
 package com.example.gymcrm.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
-public class Trainee extends User {
-    private Long userId;
+@Entity
+@Table(name = "trainee")
+public class Trainee {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
+
+    @Column(name = "address")
     private String address;
 
-    public Trainee() {
-    }
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
 
-    public Trainee(Long userId, String firstName, String lastName,
-                   String username, String password, boolean active,
-                   LocalDate dateOfBirth, String address) {
-        super(firstName, lastName, username, password, active);
-        this.userId = userId;
-        this.dateOfBirth = dateOfBirth;
-        this.address = address;
-    }
+    @ManyToMany
+    @JoinTable(
+            name = "trainee_trainer",
+            joinColumns = @JoinColumn(name = "trainee_id"),
+            inverseJoinColumns = @JoinColumn(name = "trainer_id")
+    )
+    private Set<Trainer> trainers = new HashSet<>();
 
-    public Trainee(String firstName, String lastName, LocalDate dateOfBirth, String address) {
-        super(firstName, lastName);
-        this.dateOfBirth = dateOfBirth;
-        this.address = address;
-    }
+    @OneToMany(mappedBy = "trainee", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Training> trainings = new HashSet<>();
 
-    public Long getUserId() {
-        return userId;
-    }
+    public Trainee() {}
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
-
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public Set<Trainer> getTrainers() { return trainers; }
+    public void setTrainers(Set<Trainer> trainers) { this.trainers = trainers; }
+    public Set<Training> getTrainings() { return trainings; }
+    public void setTrainings(Set<Training> trainings) { this.trainings = trainings; }
 }

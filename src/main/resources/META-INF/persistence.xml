@@ -8,6 +8,12 @@
     <persistence-unit name="gymcrm" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
+        <class>com.example.gymcrm.model.User</class>
+        <class>com.example.gymcrm.model.Trainee</class>
+        <class>com.example.gymcrm.model.Trainer</class>
+        <class>com.example.gymcrm.model.Training</class>
+        <class>com.example.gymcrm.model.TrainingType</class>
+
         <properties>
             <!-- DB connection settings -->
             <property name="jakarta.persistence.jdbc.driver" value="org.postgresql.Driver"/>
