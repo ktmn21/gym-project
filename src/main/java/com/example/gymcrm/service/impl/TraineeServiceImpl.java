@@ -25,8 +25,6 @@ import java.util.*;
 public class TraineeServiceImpl implements TraineeService {
 
     private static final Logger log = LoggerFactory.getLogger(TraineeServiceImpl.class);
-    @PersistenceContext
-    private EntityManager em;
 
     private final TraineeDao traineeDao;
     private final TrainerDao trainerDao;

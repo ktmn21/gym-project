@@ -1,4 +1,5 @@
-package com.example.gymcrm.service.impl;
+package com.example.gymcrm.service;
+
 
 import com.example.gymcrm.dao.TraineeDao;
 import com.example.gymcrm.dao.TrainerDao;
@@ -11,6 +12,7 @@ import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
 import com.example.gymcrm.model.User;
 import com.example.gymcrm.service.AuthenticationService;
+import com.example.gymcrm.service.impl.TraineeServiceImpl;
 import com.example.gymcrm.util.UsernamePasswordGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
