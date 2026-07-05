@@ -17,11 +17,13 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
 
+@Service
 public class TraineeServiceImpl implements TraineeService {
 
     private static final Logger log = LoggerFactory.getLogger(TraineeServiceImpl.class);
