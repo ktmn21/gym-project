@@ -48,7 +48,6 @@ class TraineeServiceImplTest {
     private static final String USERNAME = "John.Doe";
     private static final String PASSWORD = "secret123";
 
-    // ---------- helpers ----------
     private User buildUser(boolean active) {
         User user = new User();
         user.setFirstName("John");
