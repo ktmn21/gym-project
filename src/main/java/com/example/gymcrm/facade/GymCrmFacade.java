@@ -3,7 +3,7 @@
 //import com.example.gymcrm.model.Trainee;
 //import com.example.gymcrm.model.Trainer;
 //import com.example.gymcrm.model.Training;
-//import com.example.gymcrm.service.TraineeService;
+//import com.example.gymcrm.service.impl.TraineeService;
 //import com.example.gymcrm.service.TrainerService;
 //import com.example.gymcrm.service.TrainingService;
 //import org.slf4j.Logger;
