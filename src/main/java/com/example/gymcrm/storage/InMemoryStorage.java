@@ -43,19 +43,5 @@ public class InMemoryStorage {
         return trainingStorage;
     }
 
-    private final StorageSeedLoader seedLoader;
-    public InMemoryStorage(StorageSeedLoader storageSeedLoader){
-        this.seedLoader = storageSeedLoader;
-    }
-
-    @PostConstruct
-    public void initializeStorage() {
-        log.info("Initializing in-memory storage from seed files...");
-        seedLoader.loadTrainers(trainersSeedPath, trainerStorage);
-        seedLoader.loadTrainees(traineesSeedPath, traineeStorage);
-        seedLoader.loadTrainings(trainingsSeedPath, trainingStorage);
-        log.info("Storage initialized: {} trainers, {} trainees, {} trainings",
-                trainerStorage.size(), traineeStorage.size(), trainingStorage.size());
-    }
 
 }

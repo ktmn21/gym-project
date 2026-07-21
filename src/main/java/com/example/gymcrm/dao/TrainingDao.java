@@ -2,11 +2,15 @@ package com.example.gymcrm.dao;
 
 import com.example.gymcrm.model.Training;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface TrainingDao {
     Training save(Training training);
-    Optional<Training> findById(Long id);
-    List<Training> findAll();
+
+    List<Training> findTraineeTrainings(String traineeUsername, LocalDate fromDate, LocalDate toDate,
+                                        String trainerName, String trainingTypeName);
+
+    List<Training> findTrainerTrainings(String trainerUsername, LocalDate fromDate, LocalDate toDate,
+                                        String traineeName);
 }

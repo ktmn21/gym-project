@@ -1,79 +1,32 @@
 package com.example.gymcrm.service;
 
-import com.example.gymcrm.dao.TraineeDao;
 import com.example.gymcrm.model.Trainee;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.example.gymcrm.model.Trainer;
+import com.example.gymcrm.model.Training;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
-@Service
-public class TraineeService {
+public interface TraineeService {
 
-    private static final Logger log = LoggerFactory.getLogger(TraineeService.class);
-    private UsernamePasswordGenerator usernamePasswordGenerator;
+    Trainee createProfile(String firstName, String lastName, LocalDate dateOfBirth, String address);
 
-    @Autowired
-    public void setUsernamePasswordGenerator(UsernamePasswordGenerator usernamePasswordGenerator) {
-        this.usernamePasswordGenerator = usernamePasswordGenerator;
-    }
+    Trainee selectByUsername(String username, String password);
 
-    @Autowired
-    private TraineeDao traineeDao;
+    Trainee updateProfile(String username, String password, String firstName, String lastName,
+                           LocalDate dateOfBirth, String address);
 
-    public Trainee createTrainee(Trainee trainee){
+    void changePassword(String username, String oldPassword, String newPassword);
 
-        log.info("Creating trainee profile for {}.{}", trainee.getFirstName(), trainee.getLastName());
-        String username = usernamePasswordGenerator.generateUserName(trainee.getFirstName(), trainee.getLastName());
-        String password = usernamePasswordGenerator.generatePassword();
-        trainee.setUsername(username);
-        trainee.setPassword(password);
-        trainee.setActive(true);
-        Trainee saved = traineeDao.save(trainee);
-        log.info("Trainee created successfully: id={}, username={}", saved.getUserId(), saved.getUsername());
-        return saved;
-    }
+    void toggleActive(String username, String password);
 
-    public Trainee updateTrainee(Trainee trainee){
-        log.info("Updating trainee with id: {}" , trainee.getUserId());
-        if(traineeDao.findById(trainee.getUserId()).isEmpty()){
-            log.warn("Update failed — trainee id={} not found", trainee.getUserId());
-            throw new IllegalArgumentException("Trainee not found");
-        }
-        Trainee updated = traineeDao.update(trainee);
-        log.info("Trainee successfully update id: {}",trainee.getUserId());
-        return updated;
-    }
+    void deleteByUsername(String username, String password);
 
-    public void deleteTrainee(long id) {
-        log.info("Deleting trainee id={}", id);
-        if (traineeDao.findById(id).isEmpty()) {
-            log.warn("Delete failed — trainee id={} not found", id);
-            throw new IllegalArgumentException("Trainee not found: id=" + id);
-        }
-        traineeDao.deleteById(id);
-        log.info("Trainee id={} deleted", id);
-    }
+    List<Training> getTraineeTrainings(String username, String password, LocalDate fromDate, LocalDate toDate,
+                                        String trainerName, String trainingTypeName);
 
-    public Optional<Trainee> selectTrainee(long id) {
-        log.info("Selecting trainee id={}", id);
-        Optional<Trainee> result = traineeDao.findById(id);
-        if (result.isEmpty()) {
-            log.warn("Trainee id={} not found", id);
-        }
-        return result;
-    }
+    List<Trainer> getTrainersNotAssigned(String username, String password);
 
-    public Optional<Trainee> selectTraineeByUsername(String username) {
-        log.info("Selecting trainee by username={}", username);
-        return traineeDao.findByUsername(username);
-    }
-
-    public List<Trainee> selectAllTrainees() {
-        log.info("Selecting all trainees");
-        return traineeDao.findAll();
-    }
+    Trainee updateTrainersList(String username, String password, Set<Long> trainerIds);
 }
