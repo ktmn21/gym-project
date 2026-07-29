@@ -17,7 +17,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = "com.example.gymcrm.controller")
+@ComponentScan(basePackages = {"com.example.gymcrm.controller", "com.example.gymcrm.exceptions"})
 public class WebConfig implements WebMvcConfigurer {
 
     @Override
