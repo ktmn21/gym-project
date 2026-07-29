@@ -28,7 +28,13 @@ public class TrainerDaoImpl implements TrainerDao {
 
     @Override
     public Optional<Trainer> findByUsername(String username) {
-        List<Trainer> trainers = em.createQuery("SELECT t FROM Trainer t WHERE t.user.username = :username", Trainer.class)
+        List<Trainer> trainers = em.createQuery(
+                        "select distinct t from Trainer t " +
+                                "left join fetch t.user " +
+                                "left join fetch t.specialization " +
+                                "left join fetch t.trainees tr " +
+                                "left join fetch tr.user " +
+                                "where t.user.username = :username", Trainer.class)
                 .setParameter("username", username)
                 .getResultList();
         return trainers.isEmpty() ? Optional.empty() : Optional.of(trainers.get(0));

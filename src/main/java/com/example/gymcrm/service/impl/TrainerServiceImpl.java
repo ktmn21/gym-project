@@ -6,10 +6,7 @@ import com.example.gymcrm.dao.TrainingTypeDao;
 import com.example.gymcrm.dao.UserDao;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
-import com.example.gymcrm.model.Trainer;
-import com.example.gymcrm.model.Training;
-import com.example.gymcrm.model.TrainingType;
-import com.example.gymcrm.model.User;
+import com.example.gymcrm.model.*;
 import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TraineeService;
 import com.example.gymcrm.service.TrainerService;
@@ -80,6 +77,7 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
+    @Transactional
     public Trainer selectByUsername(String username, String password) {
         authenticationService.authenticate(username, password);
         return findOrThrow(username);
@@ -138,6 +136,17 @@ public class TrainerServiceImpl implements TrainerService {
     public List<Training> getTrainerTrainings(String username, String password, LocalDate fromDate, LocalDate toDate, String traineeName) {
         authenticationService.authenticate(username, password);
         return trainingDao.findTrainerTrainings(username, fromDate, toDate, traineeName);
+    }
+
+    @Override
+    @Transactional
+    public void setActiveStatus(String username, String password, boolean isActive) {
+        authenticationService.authenticate(username, password);
+        Trainer trainer = trainerDao.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + username));
+        trainer.getUser().setActive(isActive);
+        trainerDao.update(trainer);
+        log.info("Set active={} for trainer username={}", isActive, username);
     }
 
     private Trainer findOrThrow(String username) {

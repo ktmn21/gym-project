@@ -171,4 +171,21 @@ public class TraineeController {
         service.setActiveStatus(username, password, request.getIsActive());
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Get active trainers not assigned to this trainee")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Unassigned trainers retrieved",
+                    content = @Content(schema = @Schema(implementation = TrainerSummary.class))),
+            @ApiResponse(responseCode = "401", description = "Authentication failed",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/{username}/unassigned-trainers")
+    public ResponseEntity<List<TrainerSummary>> getUnassignedTrainers(
+            @PathVariable("username") String username,
+            @RequestHeader("X-Password") String password) {
+
+        List<TrainerSummary> trainers = service.getTrainersNotAssigned(username, password)
+                .stream().map(TraineeMapper::toTrainerSummary).collect(Collectors.toList());
+        return ResponseEntity.ok(trainers);
+    }
 }
