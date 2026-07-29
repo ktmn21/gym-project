@@ -13,8 +13,6 @@ import com.example.gymcrm.model.User;
 import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TraineeService;
 import com.example.gymcrm.util.UsernamePasswordGenerator;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

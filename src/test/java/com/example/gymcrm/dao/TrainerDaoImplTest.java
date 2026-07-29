@@ -1,6 +1,7 @@
 package com.example.gymcrm.dao;
 
 import com.example.gymcrm.config.AppConfig;
+import com.example.gymcrm.config.TestPersistenceConfig;
 import com.example.gymcrm.dao.implementations.TrainerDaoImpl;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
@@ -24,7 +25,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = AppConfig.class)
+@ContextConfiguration(classes = TestPersistenceConfig.class)
 @Transactional
 class TrainerDaoImplTest {
 
@@ -33,6 +34,19 @@ class TrainerDaoImplTest {
 
     @PersistenceContext
     private EntityManager em;
+
+    @BeforeEach
+    void seedTrainingTypes() {
+        if (em.createQuery("select count(t) from TrainingType t", Long.class)
+                .getSingleResult() == 0) {
+            for (String name : List.of("Cardio", "Strength", "Yoga")) {
+                TrainingType type = new TrainingType();
+                type.setTrainingTypeName(name);
+                em.persist(type);
+            }
+            em.flush();
+        }
+    }
 
     private TrainingType getExistingTrainingType(String name) {
         List<TrainingType> types = em.createQuery(
