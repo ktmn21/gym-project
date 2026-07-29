@@ -1,4 +1,4 @@
-package com.example.gymcrm.dto;
+package com.example.gymcrm.dto.trainee;
 
 public class TraineeRegistrationResponse {
 

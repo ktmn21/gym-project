@@ -183,6 +183,44 @@ public class TraineeServiceImpl implements TraineeService {
         return updated;
     }
 
+    @Override
+    @Transactional
+    public void setActiveStatus(String username, String password, boolean isActive) {
+        authenticationService.authenticate(username, password);
+        Trainee trainee = findOrThrow(username);
+        trainee.getUser().setActive(isActive);
+        traineeDao.update(trainee);
+        log.info("Set active={} for trainee username={}", isActive, username);
+    }
+
+    @Override
+    @Transactional
+    public Trainee updateTrainersListByUsername(String username, String password, Set<String> trainerUsernames) {
+        authenticationService.authenticate(username, password);
+        Trainee trainee = findOrThrow(username);
+
+        Set<Trainer> newTrainers = new HashSet<>();
+        for (String trainerUsername : trainerUsernames) {
+            Trainer trainer = trainerDao.findByUsername(trainerUsername)
+                    .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + trainerUsername));
+            newTrainers.add(trainer);
+        }
+
+        for (Trainer oldTrainer : new HashSet<>(trainee.getTrainers())) {
+            oldTrainer.getTrainees().remove(trainee);
+        }
+        trainee.getTrainers().clear();
+
+        for (Trainer trainer : newTrainers) {
+            trainee.getTrainers().add(trainer);
+            trainer.getTrainees().add(trainee);
+        }
+
+        Trainee updated = traineeDao.update(trainee);
+        log.info("Updated trainers list for trainee username={}, count={}", username, newTrainers.size());
+        return updated;
+    }
+
     private Trainee findOrThrow(String username) {
         return traineeDao.findByUserName(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee not found username=" + username));

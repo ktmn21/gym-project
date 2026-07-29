@@ -29,7 +29,11 @@ public class TraineeDaoImpl implements TraineeDao {
 
     @Override
     public Optional<Trainee> findByUserName(String username) {
-        return em.createQuery("SELECT t FROM Trainee t WHERE t.user.username = :username", Trainee.class)
+        return em.createQuery("select t from Trainee t" +
+                        "  left join fetch t.trainers tr" +
+                        "  left join fetch tr.user" +
+                        "  left join fetch tr.specialization" +
+                        " where t.user.username = :username", Trainee.class)
                 .setParameter("username", username)
                 .getResultList()
                 .stream()
