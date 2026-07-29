@@ -24,14 +24,3 @@ public class TrainingType {
     public String getTrainingTypeName() { return trainingTypeName; }
     public void setTrainingTypeName(String trainingTypeName) { this.trainingTypeName = trainingTypeName; }
 }
-
-//public enum TrainingType {
-//    CARDIO,
-//    STRENGTH,
-//    YOGA,
-//    PILATES,
-//    CROSSFIT,
-//    STRETCHING,
-//    BOXING,
-//    SWIMMING
-//}

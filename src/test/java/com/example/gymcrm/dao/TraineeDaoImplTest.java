@@ -9,6 +9,7 @@ import com.example.gymcrm.model.TrainingType;
 import com.example.gymcrm.model.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,14 @@ class TraineeDaoImplTest {
 
     @PersistenceContext
     private EntityManager em;
+
+    @BeforeEach
+    void cleanDb() {
+        em.createQuery("delete from Training").executeUpdate();
+        em.createQuery("delete from Trainee").executeUpdate();
+        em.createQuery("delete from Trainer").executeUpdate();
+        em.createQuery("delete from User").executeUpdate();
+    }
 
     @Test
     @DisplayName("save() should persist trainee")
@@ -234,6 +243,8 @@ class TraineeDaoImplTest {
         em.clear();
 
         List<Trainee> all = traineeDao.findAll();
+        System.out.println("Trainees");
+        all.forEach(System.out::println);
 
         assertEquals(2, all.size());
         assertTrue(all.stream().anyMatch(t -> t.getUser().getUsername().equals("first.user")));
