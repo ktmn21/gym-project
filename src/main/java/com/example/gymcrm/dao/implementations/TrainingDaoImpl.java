@@ -33,7 +33,7 @@ public class TrainingDaoImpl implements TrainingDao {
                 "SELECT tr FROM Training tr " +
                         "JOIN tr.trainee tn JOIN tn.user tnu " +
                         "JOIN tr.trainer trr JOIN trr.user tru " +
-                        "JOIN tr.trainingType tt " +
+                        "JOIN tr.trainingtype tt " +
                         "WHERE tnu.username = :username");
 
         if (fromDate != null) jpql.append(" AND tr.trainingDate >= :fromDate");
