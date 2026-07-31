@@ -7,4 +7,5 @@ import java.time.LocalDate;
 public interface TrainingService {
     Training addTraining(String traineeUsername, String traineePassword, String trainerUsername,
                           String trainingName, String trainingTypeName, LocalDate trainingDate, Integer trainingDuration);
+
 }

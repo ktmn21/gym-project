@@ -36,6 +36,7 @@ public class Trainee {
 
     public Trainee() {}
 
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public LocalDate getDateOfBirth() { return dateOfBirth; }
@@ -48,4 +49,16 @@ public class Trainee {
     public void setTrainers(Set<Trainer> trainers) { this.trainers = trainers; }
     public Set<Training> getTrainings() { return trainings; }
     public void setTrainings(Set<Training> trainings) { this.trainings = trainings; }
+
+    @Override
+    public String toString() {
+        return "Trainee{" +
+                "id=" + id +
+                ", dateOfBirth=" + dateOfBirth +
+                ", address='" + address + '\'' +
+                ", user=" + user.getFirstName() +
+                ", trainers=" + trainers +
+                ", trainings=" + trainings +
+                '}';
+    }
 }

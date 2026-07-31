@@ -20,4 +20,6 @@ public interface TrainerService {
 
     List<Training> getTrainerTrainings(String username, String password, LocalDate fromDate, LocalDate toDate,
                                         String traineeName);
+
+    void setActiveStatus(String username, String password, boolean isActive);
 }

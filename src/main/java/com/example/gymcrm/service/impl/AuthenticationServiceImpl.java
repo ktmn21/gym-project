@@ -2,6 +2,7 @@ package com.example.gymcrm.service.impl;
 
 import com.example.gymcrm.dao.UserDao;
 import com.example.gymcrm.exceptions.AuthenticationException;
+import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.model.User;
 import com.example.gymcrm.service.AuthenticationService;
 import jakarta.persistence.EntityManager;
@@ -11,12 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthenticationServiceImpl implements AuthenticationService {
-
-    @PersistenceContext
-    private EntityManager em;
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationServiceImpl.class);
     private final UserDao userDao;
@@ -38,5 +37,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new AuthenticationException("Invalid username or password");
         }
         log.debug("Authentication succeeded for username={}", username);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String username, String oldPassword, String newPassword) {
+        authenticate(username, oldPassword);
+        User user = userDao.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found username=" + username));
+        user.setPassword(newPassword);
+        userDao.update(user);
+        log.info("Password changed for username={}", username);
     }
 }

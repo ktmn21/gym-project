@@ -1,6 +1,7 @@
 package com.example.gymcrm.dao;
 
 import com.example.gymcrm.config.AppConfig;
+import com.example.gymcrm.config.TestPersistenceConfig;
 import com.example.gymcrm.dao.implementations.TraineeDaoImpl;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
@@ -9,6 +10,7 @@ import com.example.gymcrm.model.TrainingType;
 import com.example.gymcrm.model.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +26,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = AppConfig.class)
+@ContextConfiguration(classes = TestPersistenceConfig.class)
 @Transactional
 class TraineeDaoImplTest {
 
@@ -33,6 +35,19 @@ class TraineeDaoImplTest {
 
     @PersistenceContext
     private EntityManager em;
+
+    @BeforeEach
+    void seedTrainingTypes() {
+        if (em.createQuery("select count(t) from TrainingType t", Long.class)
+                .getSingleResult() == 0) {
+            for (String name : List.of("Cardio", "Strength", "Yoga")) {
+                TrainingType type = new TrainingType();
+                type.setTrainingTypeName(name);
+                em.persist(type);
+            }
+            em.flush();
+        }
+    }
 
     @Test
     @DisplayName("save() should persist trainee")
@@ -234,6 +249,8 @@ class TraineeDaoImplTest {
         em.clear();
 
         List<Trainee> all = traineeDao.findAll();
+        System.out.println("Trainees");
+        all.forEach(System.out::println);
 
         assertEquals(2, all.size());
         assertTrue(all.stream().anyMatch(t -> t.getUser().getUsername().equals("first.user")));

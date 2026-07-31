@@ -29,4 +29,8 @@ public interface TraineeService {
     List<Trainer> getTrainersNotAssigned(String username, String password);
 
     Trainee updateTrainersList(String username, String password, Set<Long> trainerIds);
+
+    Trainee updateTrainersListByUsername(String username, String password, Set<String> trainerUsernames);
+
+    void setActiveStatus(String username, String password, boolean isActive);
 }
