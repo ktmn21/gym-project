@@ -1,6 +1,6 @@
 package com.example.gymcrm.service.impl;
 
-import com.example.gymcrm.dao.TraineeDao;
+import com.example.gymcrm.dao.TraineeRepository;
 import com.example.gymcrm.dao.TrainerDao;
 import com.example.gymcrm.dao.TrainingDao;
 import com.example.gymcrm.dao.UserDao;
@@ -26,17 +26,17 @@ public class TraineeServiceImpl implements TraineeService {
 
     private static final Logger log = LoggerFactory.getLogger(TraineeServiceImpl.class);
 
-    private final TraineeDao traineeDao;
+    private final TraineeRepository traineeRepository;
     private final TrainerDao trainerDao;
     private final TrainingDao trainingDao;
     private final UserDao userDao;
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
 
-    public TraineeServiceImpl(TraineeDao traineeDao, TrainerDao trainerDao, TrainingDao trainingDao,
+    public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerDao trainerDao, TrainingDao trainingDao,
                               UserDao userDao, UsernamePasswordGenerator generator,
                               AuthenticationService authenticationService) {
-        this.traineeDao = traineeDao;
+        this.traineeRepository = traineeRepository;
         this.trainerDao = trainerDao;
         this.trainingDao = trainingDao;
         this.userDao = userDao;
@@ -65,7 +65,7 @@ public class TraineeServiceImpl implements TraineeService {
         trainee.setDateOfBirth(dateOfBirth);
         trainee.setAddress(address);
 
-        traineeDao.save(trainee);
+        traineeRepository.save(trainee);
         log.info("Created trainee profile username={}", username);
         return trainee;
     }
@@ -89,7 +89,7 @@ public class TraineeServiceImpl implements TraineeService {
         trainee.setDateOfBirth(dateOfBirth);
         trainee.setAddress(address);
 
-        Trainee updated = traineeDao.update(trainee);
+        Trainee updated = traineeRepository.save(trainee);
         log.info("Updated trainee profile username={}", username);
         return updated;
     }
@@ -102,7 +102,7 @@ public class TraineeServiceImpl implements TraineeService {
 
         Trainee trainee = findOrThrow(username);
         trainee.getUser().setPassword(newPassword);
-        traineeDao.update(trainee);
+        traineeRepository.save(trainee);
         log.info("Changed password for trainee username={}", username);
     }
 
@@ -115,7 +115,7 @@ public class TraineeServiceImpl implements TraineeService {
         boolean newState = !trainee.getUser().isActive();   // ← FLIP the current value
         trainee.getUser().setActive(newState);
 
-        traineeDao.update(trainee);
+        traineeRepository.save(trainee);
         log.info("Toggled active to {} for trainee username={}", newState, username);
     }
 
@@ -124,7 +124,7 @@ public class TraineeServiceImpl implements TraineeService {
     public void deleteByUsername(String username, String password) {
         authenticationService.authenticate(username, password);
         Trainee trainee = findOrThrow(username);
-        traineeDao.delete(trainee);
+        traineeRepository.delete(trainee);
         log.info("Deleted trainee username={} (cascade removed trainings)", username);
     }
 
@@ -178,7 +178,7 @@ public class TraineeServiceImpl implements TraineeService {
             trainer.getTrainees().add(trainee);
         }
 
-        Trainee updated = traineeDao.update(trainee);
+        Trainee updated = traineeRepository.save(trainee);
         log.info("Updated trainers list for trainee username={}, count={}", username, newTrainers.size());
         return updated;
     }
@@ -189,7 +189,7 @@ public class TraineeServiceImpl implements TraineeService {
         authenticationService.authenticate(username, password);
         Trainee trainee = findOrThrow(username);
         trainee.getUser().setActive(isActive);
-        traineeDao.update(trainee);
+        traineeRepository.save(trainee);
         log.info("Set active={} for trainee username={}", isActive, username);
     }
 
@@ -216,13 +216,13 @@ public class TraineeServiceImpl implements TraineeService {
             trainer.getTrainees().add(trainee);
         }
 
-        Trainee updated = traineeDao.update(trainee);
+        Trainee updated = traineeRepository.save(trainee);
         log.info("Updated trainers list for trainee username={}, count={}", username, newTrainers.size());
         return updated;
     }
 
     private Trainee findOrThrow(String username) {
-        return traineeDao.findByUserName(username)
+        return traineeRepository.findByUserName(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee not found username=" + username));
     }
 
