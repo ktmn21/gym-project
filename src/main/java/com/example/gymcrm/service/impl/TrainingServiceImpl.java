@@ -1,9 +1,9 @@
 package com.example.gymcrm.service.impl;
 
-import com.example.gymcrm.dao.TraineeDao;
-import com.example.gymcrm.dao.TrainerDao;
-import com.example.gymcrm.dao.TrainingDao;
-import com.example.gymcrm.dao.TrainingTypeDao;
+import com.example.gymcrm.dao.TraineeRepository;
+import com.example.gymcrm.dao.TrainerRepository;
+import com.example.gymcrm.dao.TrainingRepository;
+import com.example.gymcrm.dao.TrainingTypeRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.model.Trainee;
@@ -14,7 +14,6 @@ import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TrainingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,18 +24,18 @@ public class TrainingServiceImpl implements TrainingService {
 
     private static final Logger log = LoggerFactory.getLogger(TrainingServiceImpl.class);
 
-    private final TraineeDao traineeDao;
-    private final TrainerDao trainerDao;
-    private final TrainingDao trainingDao;
-    private final TrainingTypeDao trainingTypeDao;
+    private final TraineeRepository traineeRepository;
+    private final TrainerRepository trainerRepository;
+    private final TrainingRepository trainingRepository;
+    private final TrainingTypeRepository trainingTypeRepository;
     private final AuthenticationService authenticationService;
 
-    public TrainingServiceImpl(TraineeDao traineeDao, TrainerDao trainerDao, TrainingDao trainingDao,
-                               TrainingTypeDao trainingTypeDao, AuthenticationService authenticationService) {
-        this.traineeDao = traineeDao;
-        this.trainerDao = trainerDao;
-        this.trainingDao = trainingDao;
-        this.trainingTypeDao = trainingTypeDao;
+    public TrainingServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository, TrainingRepository trainingRepository,
+                               TrainingTypeRepository trainingTypeRepository, AuthenticationService authenticationService) {
+        this.traineeRepository = traineeRepository;
+        this.trainerRepository = trainerRepository;
+        this.trainingRepository = trainingRepository;
+        this.trainingTypeRepository = trainingTypeRepository;
         this.authenticationService = authenticationService;
     }
 
@@ -51,11 +50,11 @@ public class TrainingServiceImpl implements TrainingService {
         if (trainingDuration == null) throw new ValidationException("trainingDuration is required");
 
 
-        Trainee trainee = traineeDao.findByUserName(traineeUsername)
+        Trainee trainee = traineeRepository.findByUserName(traineeUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee not found username=" + traineeUsername));
-        Trainer trainer = trainerDao.findByUsername(trainerUsername)
+        Trainer trainer = trainerRepository.findByUsername(trainerUsername)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + trainerUsername));
-        TrainingType trainingType = trainingTypeDao.findByName(trainingTypeName)
+        TrainingType trainingType = trainingTypeRepository.findByTrainingTypeName(trainingTypeName)
                 .orElseThrow(() -> new EntityNotFoundException("TrainingType not found name=" + trainingTypeName));
 
         Training training = new Training();
@@ -66,7 +65,7 @@ public class TrainingServiceImpl implements TrainingService {
         training.setTrainingDate(trainingDate);
         training.setTrainingDuration(trainingDuration);
 
-        trainingDao.save(training);
+        trainingRepository.save(training);
         log.info("Added training '{}' for trainee={} trainer={}", trainingName, traineeUsername, trainerUsername);
         return training;
     }

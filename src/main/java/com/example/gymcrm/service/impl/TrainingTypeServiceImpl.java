@@ -1,6 +1,6 @@
 package com.example.gymcrm.service.impl;
 
-import com.example.gymcrm.dao.TrainingTypeDao;
+import com.example.gymcrm.dao.TrainingTypeRepository;
 import com.example.gymcrm.model.TrainingType;
 import com.example.gymcrm.service.TrainingTypeService;
 import org.springframework.stereotype.Service;
@@ -10,15 +10,15 @@ import java.util.List;
 @Service
 public class TrainingTypeServiceImpl implements TrainingTypeService {
 
-    private final TrainingTypeDao trainingTypeDao;
+    private final TrainingTypeRepository trainingTypeRepository;
 
-    public TrainingTypeServiceImpl(TrainingTypeDao trainingTypeDao) {
-        this.trainingTypeDao = trainingTypeDao;
+    public TrainingTypeServiceImpl(TrainingTypeRepository trainingTypeRepository) {
+        this.trainingTypeRepository = trainingTypeRepository;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TrainingType> getAll() {
-        return trainingTypeDao.findAll();
+        return trainingTypeRepository.findAll();
     }
 }

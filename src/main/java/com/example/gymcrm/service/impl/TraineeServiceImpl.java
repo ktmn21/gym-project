@@ -1,9 +1,9 @@
 package com.example.gymcrm.service.impl;
 
 import com.example.gymcrm.dao.TraineeRepository;
-import com.example.gymcrm.dao.TrainerDao;
-import com.example.gymcrm.dao.TrainingDao;
-import com.example.gymcrm.dao.UserDao;
+import com.example.gymcrm.dao.TrainerRepository;
+import com.example.gymcrm.dao.TrainingRepository;
+import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.model.Trainee;
@@ -27,19 +27,19 @@ public class TraineeServiceImpl implements TraineeService {
     private static final Logger log = LoggerFactory.getLogger(TraineeServiceImpl.class);
 
     private final TraineeRepository traineeRepository;
-    private final TrainerDao trainerDao;
-    private final TrainingDao trainingDao;
-    private final UserDao userDao;
+    private final TrainerRepository trainerRepository;
+    private final TrainingRepository trainingRepository;
+    private final UserRepository userRepository;
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
 
-    public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerDao trainerDao, TrainingDao trainingDao,
-                              UserDao userDao, UsernamePasswordGenerator generator,
+    public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository, TrainingRepository trainingRepository,
+                              UserRepository userRepository, UsernamePasswordGenerator generator,
                               AuthenticationService authenticationService) {
         this.traineeRepository = traineeRepository;
-        this.trainerDao = trainerDao;
-        this.trainingDao = trainingDao;
-        this.userDao = userDao;
+        this.trainerRepository = trainerRepository;
+        this.trainingRepository = trainingRepository;
+        this.userRepository = userRepository;
         this.generator = generator;
         this.authenticationService = authenticationService;
     }
@@ -50,7 +50,7 @@ public class TraineeServiceImpl implements TraineeService {
         validateRequired(firstName, "firstName");
         validateRequired(lastName, "lastName");
 
-        String username = generator.generateUsername(firstName, lastName, userDao::existsByUsername);
+        String username = generator.generateUsername(firstName, lastName, userRepository::existsByUsername);
         String password = generator.generatePassword();
 
         User user = new User();
@@ -112,7 +112,7 @@ public class TraineeServiceImpl implements TraineeService {
         authenticationService.authenticate(username, password);
         Trainee trainee = findOrThrow(username);
 
-        boolean newState = !trainee.getUser().isActive();   // ← FLIP the current value
+        boolean newState = !trainee.getUser().isActive();
         trainee.getUser().setActive(newState);
 
         traineeRepository.save(trainee);
@@ -131,14 +131,14 @@ public class TraineeServiceImpl implements TraineeService {
     @Override
     public List<Training> getTraineeTrainings(String username, String password, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
         authenticationService.authenticate(username, password);
-        return trainingDao.findTraineeTrainings(username, fromDate, toDate, trainerName, trainingTypeName);
+        return trainingRepository.findTraineeTrainings(username, fromDate, toDate, trainerName, trainingTypeName);
     }
 
     @Override
     public List<Trainer> getTrainersNotAssigned(String username, String password) {
 
         authenticationService.authenticate(username, password);
-        return trainerDao.findAllNotAssignedToTrainee(username);
+        return trainerRepository.findAllNotAssignedToTrainee(username);
 
     }
 
@@ -149,7 +149,7 @@ public class TraineeServiceImpl implements TraineeService {
         Trainee trainee = findOrThrow(username);
 
         Set<Trainer> currentTrainers = new HashSet<>(trainee.getTrainers());
-        Set<Trainer> availableTrainers = new HashSet<>(trainerDao.findAllNotAssignedToTrainee(username));
+        Set<Trainer> availableTrainers = new HashSet<>(trainerRepository.findAllNotAssignedToTrainee(username));
 
         Map<Long, Trainer> allowedById = new HashMap<>();
         for (Trainer trainer : currentTrainers) {
@@ -201,7 +201,7 @@ public class TraineeServiceImpl implements TraineeService {
 
         Set<Trainer> newTrainers = new HashSet<>();
         for (String trainerUsername : trainerUsernames) {
-            Trainer trainer = trainerDao.findByUsername(trainerUsername)
+            Trainer trainer = trainerRepository.findByUsername(trainerUsername)
                     .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + trainerUsername));
             newTrainers.add(trainer);
         }
