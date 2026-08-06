@@ -3,7 +3,6 @@ spring:
     name: gym-crm
   profiles:
     active: local
-
   jpa:
     open-in-view: false
     properties:
@@ -13,11 +12,12 @@ spring:
   sql:
     init:
       mode: never
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
 
 server:
   port: 8080
-
-spring:jackson.serialization.write-dates-as-timestamps: false
 
 management:
   endpoints:
