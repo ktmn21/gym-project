@@ -36,3 +36,8 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# .env
+DB_USERNAME=gym_user
+DB_PASSWORD=gym_pass
+DB_URL=jdbc:postgresql://localhost:5432/gymcrm
