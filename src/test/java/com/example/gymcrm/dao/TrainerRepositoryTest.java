@@ -1,20 +1,15 @@
 package com.example.gymcrm.dao;
 
-import com.example.gymcrm.dao.implementations.TrainerDaoImpl;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.TrainingType;
 import com.example.gymcrm.model.User;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,47 +17,40 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = TestPersistenceConfig.class)
-@Transactional
-class TrainerDaoImplTest {
+@DataJpaTest
+class TrainerRepositoryTest {
 
     @Autowired
-    private TrainerDaoImpl trainerDao;
+    private TrainerRepository trainerRepository;
 
-    @PersistenceContext
-    private EntityManager em;
+    @Autowired
+    private TestEntityManager em;
 
     @BeforeEach
-    void seedTrainingTypes() {
-        if (em.createQuery("select count(t) from TrainingType t", Long.class)
-                .getSingleResult() == 0) {
-            for (String name : List.of("Cardio", "Strength", "Yoga")) {
-                TrainingType type = new TrainingType();
-                type.setTrainingTypeName(name);
-                em.persist(type);
-            }
-            em.flush();
+    void setUp() {
+        em.getEntityManager().createQuery("delete from Training").executeUpdate();
+        em.getEntityManager().createQuery("delete from Trainer").executeUpdate();
+        em.getEntityManager().createQuery("delete from Trainee").executeUpdate();
+        em.getEntityManager().createQuery("delete from User").executeUpdate();
+        em.getEntityManager().createQuery("delete from TrainingType").executeUpdate();
+
+        for (String name : List.of("Cardio", "Strength", "Yoga")) {
+            TrainingType type = new TrainingType();
+            type.setTrainingTypeName(name);
+            em.persist(type);
         }
+        em.flush();
     }
 
     private TrainingType getExistingTrainingType(String name) {
-        List<TrainingType> types = em.createQuery(
+        List<TrainingType> types = em.getEntityManager().createQuery(
                         "SELECT t FROM TrainingType t WHERE t.trainingTypeName = :name",
                         TrainingType.class)
                 .setParameter("name", name)
                 .getResultList();
 
-        assertFalse(types.isEmpty(), "TrainingType '" + name + "' must exist in DB for this test");
+        assertFalse(types.isEmpty(), "TrainingType '" + name + "' must exist");
         return types.get(0);
-    }
-
-    @BeforeEach
-    void cleanDb() {
-        em.createQuery("delete from Training").executeUpdate();
-        em.createQuery("delete from Trainee").executeUpdate();
-        em.createQuery("delete from Trainer").executeUpdate();
-        em.createQuery("delete from User").executeUpdate();
     }
 
     @Test
@@ -81,14 +69,14 @@ class TrainerDaoImplTest {
         trainer.setUser(user);
         trainer.setSpecialization(type);
 
-        Trainer saved = trainerDao.save(trainer);
+        Trainer saved = trainerRepository.save(trainer);
 
         em.flush();
         em.clear();
 
         assertNotNull(saved.getId());
 
-        Optional<Trainer> found = trainerDao.findByUsername("alice.trainer");
+        Optional<Trainer> found = trainerRepository.findByUsername("alice.trainer");
         assertTrue(found.isPresent());
         assertEquals("alice.trainer", found.get().getUser().getUsername());
         assertEquals("Alice", found.get().getUser().getFirstName());
@@ -111,12 +99,11 @@ class TrainerDaoImplTest {
         trainer.setUser(user);
         trainer.setSpecialization(type);
 
-        trainerDao.save(trainer);
-
+        trainerRepository.save(trainer);
         em.flush();
         em.clear();
 
-        Optional<Trainer> found = trainerDao.findByUsername("bob.coach");
+        Optional<Trainer> found = trainerRepository.findByUsername("bob.coach");
 
         assertTrue(found.isPresent());
         assertEquals("Bob", found.get().getUser().getFirstName());
@@ -127,12 +114,11 @@ class TrainerDaoImplTest {
     @Test
     @DisplayName("findByUsername() should return empty when trainer does not exist")
     void findByUsernameShouldReturnEmpty() {
-        Optional<Trainer> found = trainerDao.findByUsername("missing.trainer");
-        assertTrue(found.isEmpty());
+        assertTrue(trainerRepository.findByUsername("missing.trainer").isEmpty());
     }
 
     @Test
-    @DisplayName("update() should merge trainer changes")
+    @DisplayName("save() should merge trainer changes")
     void updateShouldMergeTrainerChanges() {
         TrainingType type = getExistingTrainingType("Yoga");
 
@@ -147,23 +133,21 @@ class TrainerDaoImplTest {
         trainer.setUser(user);
         trainer.setSpecialization(type);
 
-        trainerDao.save(trainer);
-
+        trainerRepository.save(trainer);
         em.flush();
         em.clear();
 
-        Optional<Trainer> found = trainerDao.findByUsername("carol.fit");
+        Optional<Trainer> found = trainerRepository.findByUsername("carol.fit");
         assertTrue(found.isPresent());
 
         Trainer toUpdate = found.get();
         toUpdate.getUser().setFirstName("Caroline");
 
-        Trainer updated = trainerDao.update(toUpdate);
-
+        Trainer updated = trainerRepository.save(toUpdate);   // ← was update()
         em.flush();
         em.clear();
 
-        Optional<Trainer> reloaded = trainerDao.findByUsername("carol.fit");
+        Optional<Trainer> reloaded = trainerRepository.findByUsername("carol.fit");
 
         assertNotNull(updated);
         assertTrue(reloaded.isPresent());
@@ -172,7 +156,7 @@ class TrainerDaoImplTest {
     }
 
     @Test
-    @DisplayName("findAllNotAssignedToTrainee() should return only trainers not assigned to trainee")
+    @DisplayName("findAllNotAssignedToTrainee() should return only unassigned trainers")
     void findAllNotAssignedToTraineeShouldReturnUnassignedTrainers() {
         TrainingType cardio = getExistingTrainingType("Cardio");
         TrainingType strength = getExistingTrainingType("Strength");
@@ -218,11 +202,10 @@ class TrainerDaoImplTest {
         assignedTrainer.getTrainees().add(trainee);
 
         em.persist(trainee);
-
         em.flush();
         em.clear();
 
-        List<Trainer> result = trainerDao.findAllNotAssignedToTrainee("trainee.one");
+        List<Trainer> result = trainerRepository.findAllNotAssignedToTrainee("trainee.one");
 
         assertEquals(1, result.size());
         assertEquals("free.trainer", result.get(0).getUser().getUsername());

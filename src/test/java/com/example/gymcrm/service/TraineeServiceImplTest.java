@@ -1,32 +1,28 @@
 package com.example.gymcrm.service;
 
-
-import com.example.gymcrm.dao.TraineeDao;
-import com.example.gymcrm.dao.TrainerDao;
-import com.example.gymcrm.dao.TrainingDao;
-import com.example.gymcrm.dao.UserDao;
+import com.example.gymcrm.dao.TraineeRepository;
+import com.example.gymcrm.dao.TrainerRepository;
+import com.example.gymcrm.dao.TrainingRepository;
+import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
+import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
 import com.example.gymcrm.model.User;
-import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.impl.TraineeServiceImpl;
 import com.example.gymcrm.util.UsernamePasswordGenerator;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -35,12 +31,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TraineeServiceImplTest {
 
-    @Mock private TraineeDao traineeDao;
-    @Mock private TrainerDao trainerDao;
-    @Mock private TrainingDao trainingDao;
-    @Mock private UserDao userDao;
+    @Mock private TraineeRepository traineeRepository;
+    @Mock private TrainerRepository trainerRepository;
+    @Mock private TrainingRepository trainingRepository;
+    @Mock private UserRepository userRepository;
     @Mock private UsernamePasswordGenerator generator;
     @Mock private AuthenticationService authenticationService;
+    @Mock private GymMetrics gymMetrics;
 
     @InjectMocks
     private TraineeServiceImpl service;
@@ -74,9 +71,6 @@ class TraineeServiceImplTest {
         return trainer;
     }
 
-    // =====================================================================
-    // createProfile
-    // =====================================================================
     @Nested
     @DisplayName("createProfile")
     class CreateProfile {
@@ -84,10 +78,9 @@ class TraineeServiceImplTest {
         @Test
         @DisplayName("HAPPY: creates trainee with generated username & password")
         void createProfile_success() {
-            when(generator.generateUsername(eq("John"), eq("Doe"), any()))
-                    .thenReturn(USERNAME);
+            when(generator.generateUsername(eq("John"), eq("Doe"), any())).thenReturn(USERNAME);
             when(generator.generatePassword()).thenReturn(PASSWORD);
-            when(traineeDao.save(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(traineeRepository.save(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
 
             Trainee result = service.createProfile("John", "Doe",
                     LocalDate.of(1990, 1, 1), "Street 1");
@@ -97,7 +90,8 @@ class TraineeServiceImplTest {
             assertEquals(PASSWORD, result.getUser().getPassword());
             assertTrue(result.getUser().isActive());
             assertEquals("Street 1", result.getAddress());
-            verify(traineeDao).save(any(Trainee.class));
+            verify(traineeRepository).save(any(Trainee.class));
+            verify(gymMetrics).incrementTraineeCreated();   // ← verify metric
         }
 
         @Test
@@ -106,7 +100,7 @@ class TraineeServiceImplTest {
             ValidationException ex = assertThrows(ValidationException.class,
                     () -> service.createProfile("  ", "Doe", null, null));
             assertTrue(ex.getMessage().contains("firstName"));
-            verifyNoInteractions(traineeDao);
+            verifyNoInteractions(traineeRepository);
         }
 
         @Test
@@ -114,7 +108,7 @@ class TraineeServiceImplTest {
         void createProfile_nullFirstName() {
             assertThrows(ValidationException.class,
                     () -> service.createProfile(null, "Doe", null, null));
-            verifyNoInteractions(traineeDao);
+            verifyNoInteractions(traineeRepository);
         }
 
         @Test
@@ -123,13 +117,10 @@ class TraineeServiceImplTest {
             ValidationException ex = assertThrows(ValidationException.class,
                     () -> service.createProfile("John", "", null, null));
             assertTrue(ex.getMessage().contains("lastName"));
-            verifyNoInteractions(traineeDao);
+            verifyNoInteractions(traineeRepository);
         }
     }
 
-    // =====================================================================
-    // selectByUsername
-    // =====================================================================
     @Nested
     @DisplayName("selectByUsername")
     class SelectByUsername {
@@ -138,7 +129,7 @@ class TraineeServiceImplTest {
         @DisplayName("HAPPY: returns trainee after authentication")
         void select_success() {
             Trainee trainee = buildTrainee(true);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
 
             Trainee result = service.selectByUsername(USERNAME, PASSWORD);
 
@@ -154,22 +145,19 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.selectByUsername(USERNAME, PASSWORD));
-            verify(traineeDao, never()).findByUserName(anyString());
+            verify(traineeRepository, never()).findByUserName(anyString());
         }
 
         @Test
         @DisplayName("UNHAPPY: throws when trainee not found")
         void select_notFound() {
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.empty());
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
                     () -> service.selectByUsername(USERNAME, PASSWORD));
         }
     }
 
-    // =====================================================================
-    // updateProfile
-    // =====================================================================
     @Nested
     @DisplayName("updateProfile")
     class UpdateProfile {
@@ -178,8 +166,8 @@ class TraineeServiceImplTest {
         @DisplayName("HAPPY: updates fields and returns updated trainee")
         void update_success() {
             Trainee trainee = buildTrainee(true);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
-            when(traineeDao.update(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(traineeRepository.save(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
 
             Trainee result = service.updateProfile(USERNAME, PASSWORD,
                     "Jane", "Smith", LocalDate.of(1985, 5, 5), "New Address");
@@ -189,7 +177,7 @@ class TraineeServiceImplTest {
             assertEquals(LocalDate.of(1985, 5, 5), result.getDateOfBirth());
             assertEquals("New Address", result.getAddress());
             verify(authenticationService).authenticate(USERNAME, PASSWORD);
-            verify(traineeDao).update(trainee);
+            verify(traineeRepository).save(trainee);
         }
 
         @Test
@@ -197,7 +185,7 @@ class TraineeServiceImplTest {
         void update_blankFirstName() {
             assertThrows(ValidationException.class,
                     () -> service.updateProfile(USERNAME, PASSWORD, "", "Smith", null, null));
-            verify(traineeDao, never()).update(any());
+            verify(traineeRepository, never()).save(any());
         }
 
         @Test
@@ -208,22 +196,19 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.updateProfile(USERNAME, PASSWORD, "Jane", "Smith", null, null));
-            verify(traineeDao, never()).update(any());
+            verify(traineeRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("UNHAPPY: throws when trainee not found")
         void update_notFound() {
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.empty());
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
                     () -> service.updateProfile(USERNAME, PASSWORD, "Jane", "Smith", null, null));
         }
     }
 
-    // =====================================================================
-    // changePassword
-    // =====================================================================
     @Nested
     @DisplayName("changePassword")
     class ChangePassword {
@@ -232,13 +217,13 @@ class TraineeServiceImplTest {
         @DisplayName("HAPPY: changes password")
         void changePassword_success() {
             Trainee trainee = buildTrainee(true);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
 
             service.changePassword(USERNAME, PASSWORD, "newPass123");
 
             assertEquals("newPass123", trainee.getUser().getPassword());
             verify(authenticationService).authenticate(USERNAME, PASSWORD);
-            verify(traineeDao).update(trainee);
+            verify(traineeRepository).save(trainee);
         }
 
         @Test
@@ -246,7 +231,7 @@ class TraineeServiceImplTest {
         void changePassword_blankNew() {
             assertThrows(ValidationException.class,
                     () -> service.changePassword(USERNAME, PASSWORD, "  "));
-            verify(traineeDao, never()).update(any());
+            verify(traineeRepository, never()).save(any());
         }
 
         @Test
@@ -257,13 +242,10 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.changePassword(USERNAME, PASSWORD, "newPass123"));
-            verify(traineeDao, never()).update(any());
+            verify(traineeRepository, never()).save(any());
         }
     }
 
-    // =====================================================================
-    // toggleActive
-    // =====================================================================
     @Nested
     @DisplayName("toggleActive")
     class ToggleActive {
@@ -272,39 +254,39 @@ class TraineeServiceImplTest {
         @DisplayName("HAPPY: active -> inactive")
         void toggle_activeToInactive() {
             Trainee trainee = buildTrainee(true);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
 
             service.toggleActive(USERNAME, PASSWORD);
 
             assertFalse(trainee.getUser().isActive());
-            verify(traineeDao).update(trainee);
+            verify(traineeRepository).save(trainee);
         }
 
         @Test
         @DisplayName("HAPPY: inactive -> active")
         void toggle_inactiveToActive() {
             Trainee trainee = buildTrainee(false);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
 
             service.toggleActive(USERNAME, PASSWORD);
 
             assertTrue(trainee.getUser().isActive());
-            verify(traineeDao).update(trainee);
+            verify(traineeRepository).save(trainee);
         }
 
         @Test
-        @DisplayName("BEHAVIOR: two toggles return to original (non-idempotent)")
+        @DisplayName("BEHAVIOR: two toggles return to original")
         void toggle_twiceReturnsToOriginal() {
             Trainee trainee = buildTrainee(true);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
 
             service.toggleActive(USERNAME, PASSWORD);
             assertFalse(trainee.getUser().isActive());
 
             service.toggleActive(USERNAME, PASSWORD);
-            assertTrue(trainee.getUser().isActive());   // back to original
+            assertTrue(trainee.getUser().isActive());
 
-            verify(traineeDao, times(2)).update(trainee);
+            verify(traineeRepository, times(2)).save(trainee);
         }
 
         @Test
@@ -315,22 +297,19 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.toggleActive(USERNAME, PASSWORD));
-            verify(traineeDao, never()).update(any());
+            verify(traineeRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("UNHAPPY: throws when trainee not found")
         void toggle_notFound() {
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.empty());
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
                     () -> service.toggleActive(USERNAME, PASSWORD));
         }
     }
 
-    // =====================================================================
-    // deleteByUsername
-    // =====================================================================
     @Nested
     @DisplayName("deleteByUsername")
     class DeleteByUsername {
@@ -339,12 +318,12 @@ class TraineeServiceImplTest {
         @DisplayName("HAPPY: deletes trainee")
         void delete_success() {
             Trainee trainee = buildTrainee(true);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
 
             service.deleteByUsername(USERNAME, PASSWORD);
 
             verify(authenticationService).authenticate(USERNAME, PASSWORD);
-            verify(traineeDao).delete(trainee);
+            verify(traineeRepository).delete(trainee);
         }
 
         @Test
@@ -355,32 +334,29 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.deleteByUsername(USERNAME, PASSWORD));
-            verify(traineeDao, never()).delete(any());
+            verify(traineeRepository, never()).delete(any());
         }
 
         @Test
         @DisplayName("UNHAPPY: throws when trainee not found")
         void delete_notFound() {
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.empty());
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
                     () -> service.deleteByUsername(USERNAME, PASSWORD));
-            verify(traineeDao, never()).delete(any());
+            verify(traineeRepository, never()).delete(any());
         }
     }
 
-    // =====================================================================
-    // getTraineeTrainings
-    // =====================================================================
     @Nested
     @DisplayName("getTraineeTrainings")
     class GetTraineeTrainings {
 
         @Test
-        @DisplayName("HAPPY: returns trainings from dao")
+        @DisplayName("HAPPY: returns trainings from repository")
         void getTrainings_success() {
             List<Training> trainings = List.of(new Training(), new Training());
-            when(trainingDao.findTraineeTrainings(USERNAME, null, null, null, null))
+            when(trainingRepository.findTraineeTrainings(USERNAME, null, null, null, null))
                     .thenReturn(trainings);
 
             List<Training> result = service.getTraineeTrainings(
@@ -391,18 +367,18 @@ class TraineeServiceImplTest {
         }
 
         @Test
-        @DisplayName("HAPPY: passes all criteria to dao")
+        @DisplayName("HAPPY: passes all criteria to repository")
         void getTrainings_withCriteria() {
             LocalDate from = LocalDate.of(2024, 1, 1);
             LocalDate to = LocalDate.of(2024, 12, 31);
-            when(trainingDao.findTraineeTrainings(USERNAME, from, to, "Trainer", "Cardio"))
+            when(trainingRepository.findTraineeTrainings(USERNAME, from, to, "Trainer", "Cardio"))
                     .thenReturn(Collections.emptyList());
 
             List<Training> result = service.getTraineeTrainings(
                     USERNAME, PASSWORD, from, to, "Trainer", "Cardio");
 
             assertTrue(result.isEmpty());
-            verify(trainingDao).findTraineeTrainings(USERNAME, from, to, "Trainer", "Cardio");
+            verify(trainingRepository).findTraineeTrainings(USERNAME, from, to, "Trainer", "Cardio");
         }
 
         @Test
@@ -413,13 +389,10 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.getTraineeTrainings(USERNAME, PASSWORD, null, null, null, null));
-            verifyNoInteractions(trainingDao);
+            verifyNoInteractions(trainingRepository);
         }
     }
 
-    // =====================================================================
-    // getTrainersNotAssigned
-    // =====================================================================
     @Nested
     @DisplayName("getTrainersNotAssigned")
     class GetTrainersNotAssigned {
@@ -428,7 +401,7 @@ class TraineeServiceImplTest {
         @DisplayName("HAPPY: returns unassigned trainers")
         void notAssigned_success() {
             List<Trainer> trainers = List.of(buildTrainer(1L), buildTrainer(2L));
-            when(trainerDao.findAllNotAssignedToTrainee(USERNAME)).thenReturn(trainers);
+            when(trainerRepository.findAllNotAssignedToTrainee(USERNAME)).thenReturn(trainers);
 
             List<Trainer> result = service.getTrainersNotAssigned(USERNAME, PASSWORD);
 
@@ -444,13 +417,10 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.getTrainersNotAssigned(USERNAME, PASSWORD));
-            verifyNoInteractions(trainerDao);
+            verifyNoInteractions(trainerRepository);
         }
     }
 
-    // =====================================================================
-    // updateTrainersList
-    // =====================================================================
     @Nested
     @DisplayName("updateTrainersList")
     class UpdateTrainersList {
@@ -462,21 +432,19 @@ class TraineeServiceImplTest {
             Trainer t1 = buildTrainer(1L);
             Trainer t2 = buildTrainer(2L);
 
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
-            when(trainerDao.findAllNotAssignedToTrainee(USERNAME))
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(trainerRepository.findAllNotAssignedToTrainee(USERNAME))
                     .thenReturn(List.of(t1, t2));
-            when(traineeDao.update(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(traineeRepository.save(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Trainee result = service.updateTrainersList(
-                    USERNAME, PASSWORD, Set.of(1L, 2L));
+            Trainee result = service.updateTrainersList(USERNAME, PASSWORD, Set.of(1L, 2L));
 
             assertEquals(2, result.getTrainers().size());
             assertTrue(result.getTrainers().contains(t1));
             assertTrue(result.getTrainers().contains(t2));
-            // both sides maintained
             assertTrue(t1.getTrainees().contains(trainee));
             assertTrue(t2.getTrainees().contains(trainee));
-            verify(traineeDao).update(trainee);
+            verify(traineeRepository).save(trainee);
         }
 
         @Test
@@ -487,13 +455,12 @@ class TraineeServiceImplTest {
             trainee.getTrainers().add(existing);
             existing.getTrainees().add(trainee);
 
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
-            when(trainerDao.findAllNotAssignedToTrainee(USERNAME))
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(trainerRepository.findAllNotAssignedToTrainee(USERNAME))
                     .thenReturn(Collections.emptyList());
-            when(traineeDao.update(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(traineeRepository.save(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Trainee result = service.updateTrainersList(
-                    USERNAME, PASSWORD, Set.of(1L));
+            Trainee result = service.updateTrainersList(USERNAME, PASSWORD, Set.of(1L));
 
             assertEquals(1, result.getTrainers().size());
             assertTrue(result.getTrainers().contains(existing));
@@ -507,30 +474,29 @@ class TraineeServiceImplTest {
             trainee.getTrainers().add(existing);
             existing.getTrainees().add(trainee);
 
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
-            when(trainerDao.findAllNotAssignedToTrainee(USERNAME))
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(trainerRepository.findAllNotAssignedToTrainee(USERNAME))
                     .thenReturn(Collections.emptyList());
-            when(traineeDao.update(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(traineeRepository.save(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Trainee result = service.updateTrainersList(
-                    USERNAME, PASSWORD, Collections.emptySet());
+            Trainee result = service.updateTrainersList(USERNAME, PASSWORD, Collections.emptySet());
 
             assertTrue(result.getTrainers().isEmpty());
-            assertFalse(existing.getTrainees().contains(trainee)); // detached both sides
+            assertFalse(existing.getTrainees().contains(trainee));
         }
 
         @Test
         @DisplayName("UNHAPPY: throws when a trainer id is not allowed/found")
         void updateTrainers_invalidId() {
             Trainee trainee = buildTrainee(true);
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
-            when(trainerDao.findAllNotAssignedToTrainee(USERNAME))
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+            when(trainerRepository.findAllNotAssignedToTrainee(USERNAME))
                     .thenReturn(Collections.emptyList());
 
             EntityNotFoundException ex = assertThrows(EntityNotFoundException.class,
                     () -> service.updateTrainersList(USERNAME, PASSWORD, Set.of(999L)));
             assertTrue(ex.getMessage().contains("999"));
-            verify(traineeDao, never()).update(any());
+            verify(traineeRepository, never()).save(any());
         }
 
         @Test
@@ -541,13 +507,13 @@ class TraineeServiceImplTest {
 
             assertThrows(ValidationException.class,
                     () -> service.updateTrainersList(USERNAME, PASSWORD, Set.of(1L)));
-            verify(traineeDao, never()).update(any());
+            verify(traineeRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("UNHAPPY: throws when trainee not found")
         void updateTrainers_traineeNotFound() {
-            when(traineeDao.findByUserName(USERNAME)).thenReturn(Optional.empty());
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
                     () -> service.updateTrainersList(USERNAME, PASSWORD, Set.of(1L)));

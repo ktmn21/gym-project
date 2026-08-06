@@ -354,7 +354,7 @@ class TraineeControllerTest {
                             .param("fromDate", "2024-01-01")
                             .param("toDate", "2024-12-31")
                             .param("trainerName", "Jane")
-                            .param("trainingtype", "Cardio"))
+                            .param("trainingType", "Cardio"))
                     .andExpect(status().isOk());
         }
 
