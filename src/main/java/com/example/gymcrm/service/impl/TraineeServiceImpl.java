@@ -6,6 +6,7 @@ import com.example.gymcrm.dao.TrainingRepository;
 import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
+import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
@@ -17,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.LocalDate;
 import java.util.*;
@@ -33,15 +35,18 @@ public class TraineeServiceImpl implements TraineeService {
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
 
+    private final GymMetrics gymMetrics;
+
     public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository, TrainingRepository trainingRepository,
                               UserRepository userRepository, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService) {
+                              AuthenticationService authenticationService, GymMetrics gymMetrics) {
         this.traineeRepository = traineeRepository;
         this.trainerRepository = trainerRepository;
         this.trainingRepository = trainingRepository;
         this.userRepository = userRepository;
         this.generator = generator;
         this.authenticationService = authenticationService;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
@@ -66,6 +71,7 @@ public class TraineeServiceImpl implements TraineeService {
         trainee.setAddress(address);
 
         traineeRepository.save(trainee);
+        gymMetrics.incrementTraineeCreated();
         log.info("Created trainee profile username={}", username);
         return trainee;
     }

@@ -3,6 +3,7 @@ package com.example.gymcrm.service.impl;
 import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.AuthenticationException;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
+import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.User;
 import com.example.gymcrm.service.AuthenticationService;
 import org.slf4j.Logger;
@@ -15,9 +16,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationServiceImpl.class);
     private final UserRepository userRepository;
+    private final GymMetrics gymMetrics;
 
-    public AuthenticationServiceImpl(UserRepository userRepository) {
+    public AuthenticationServiceImpl(UserRepository userRepository, GymMetrics gymMetrics) {
         this.userRepository = userRepository;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
@@ -25,11 +28,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
                     log.warn("Authentication failed: no user with username={}", username);
+                    gymMetrics.incrementAuthFailure();
                     return new AuthenticationException("Invalid username or password");
                 });
 
         if (!user.getPassword().equals(password)) {
             log.warn("Authentication failed: password mismatch for username={}", username);
+            gymMetrics.incrementAuthFailure();
             throw new AuthenticationException("Invalid username or password");
         }
         log.debug("Authentication succeeded for username={}", username);

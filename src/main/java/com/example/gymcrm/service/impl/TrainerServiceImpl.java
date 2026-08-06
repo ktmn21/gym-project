@@ -6,6 +6,7 @@ import com.example.gymcrm.dao.TrainingTypeRepository;
 import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
+import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.*;
 import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TraineeService;
@@ -31,16 +32,18 @@ public class TrainerServiceImpl implements TrainerService {
     private final UserRepository userRepository;
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
+    private final GymMetrics gymMetrics;
 
     public TrainerServiceImpl(TrainerRepository trainerRepository, TrainingRepository trainingRepository, TrainingTypeRepository trainingTypeRepository,
                               UserRepository userRepository, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService) {
+                              AuthenticationService authenticationService, GymMetrics gymMetrics) {
         this.trainerRepository = trainerRepository;
         this.trainingRepository = trainingRepository;
         this.trainingTypeRepository = trainingTypeRepository;
         this.userRepository = userRepository;
         this.generator = generator;
         this.authenticationService = authenticationService;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
@@ -72,6 +75,7 @@ public class TrainerServiceImpl implements TrainerService {
         trainer.setSpecialization(specialization);
 
         trainerRepository.save(trainer);
+        gymMetrics.incrementTrainerCreated();
         log.info("Created trainer profile username={}", username);
         return trainer;
     }
