@@ -1,7 +1,5 @@
 package com.example.gymcrm.dao;
 
-import com.example.gymcrm.config.AppConfig;
-import com.example.gymcrm.config.TestPersistenceConfig;
 import com.example.gymcrm.dao.implementations.TrainerDaoImpl;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
