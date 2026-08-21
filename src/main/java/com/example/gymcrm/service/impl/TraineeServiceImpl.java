@@ -7,15 +7,13 @@ import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.metrics.GymMetrics;
-import com.example.gymcrm.model.Trainee;
-import com.example.gymcrm.model.Trainer;
-import com.example.gymcrm.model.Training;
-import com.example.gymcrm.model.User;
+import com.example.gymcrm.model.*;
 import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TraineeService;
 import com.example.gymcrm.util.UsernamePasswordGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,12 +32,13 @@ public class TraineeServiceImpl implements TraineeService {
     private final UserRepository userRepository;
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
+    private final PasswordEncoder passwordEncoder;
 
     private final GymMetrics gymMetrics;
 
     public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository, TrainingRepository trainingRepository,
                               UserRepository userRepository, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService, GymMetrics gymMetrics) {
+                              AuthenticationService authenticationService, GymMetrics gymMetrics, PasswordEncoder passwordEncoder) {
         this.traineeRepository = traineeRepository;
         this.trainerRepository = trainerRepository;
         this.trainingRepository = trainingRepository;
@@ -47,6 +46,7 @@ public class TraineeServiceImpl implements TraineeService {
         this.generator = generator;
         this.authenticationService = authenticationService;
         this.gymMetrics = gymMetrics;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -56,14 +56,15 @@ public class TraineeServiceImpl implements TraineeService {
         validateRequired(lastName, "lastName");
 
         String username = generator.generateUsername(firstName, lastName, userRepository::existsByUsername);
-        String password = generator.generatePassword();
+        String rawPassword = generator.generatePassword();
 
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setUsername(username);
-        user.setPassword(password);
+        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setActive(true);
+        user.addAuthority(Role.ROLE_TRAINEE);
 
         Trainee trainee = new Trainee();
         trainee.setUser(user);
@@ -73,6 +74,7 @@ public class TraineeServiceImpl implements TraineeService {
         traineeRepository.save(trainee);
         gymMetrics.incrementTraineeCreated();
         log.info("Created trainee profile username={}", username);
+        trainee.getUser().setPassword(rawPassword);
         return trainee;
     }
 

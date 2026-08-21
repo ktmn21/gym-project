@@ -9,12 +9,11 @@ import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.*;
 import com.example.gymcrm.service.AuthenticationService;
-import com.example.gymcrm.service.TraineeService;
 import com.example.gymcrm.service.TrainerService;
 import com.example.gymcrm.util.UsernamePasswordGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,10 +32,11 @@ public class TrainerServiceImpl implements TrainerService {
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
     private final GymMetrics gymMetrics;
+    private final PasswordEncoder passwordEncoder;
 
     public TrainerServiceImpl(TrainerRepository trainerRepository, TrainingRepository trainingRepository, TrainingTypeRepository trainingTypeRepository,
                               UserRepository userRepository, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService, GymMetrics gymMetrics) {
+                              AuthenticationService authenticationService, GymMetrics gymMetrics, PasswordEncoder passwordEncoder) {
         this.trainerRepository = trainerRepository;
         this.trainingRepository = trainingRepository;
         this.trainingTypeRepository = trainingTypeRepository;
@@ -44,6 +44,7 @@ public class TrainerServiceImpl implements TrainerService {
         this.generator = generator;
         this.authenticationService = authenticationService;
         this.gymMetrics = gymMetrics;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -56,14 +57,15 @@ public class TrainerServiceImpl implements TrainerService {
         }
 
         String username = generator.generateUsername(firstName, lastName, userRepository::existsByUsername);
-        String password = generator.generatePassword();
+        String rawPassword = generator.generatePassword();
 
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setUsername(username);
-        user.setPassword(password);
+        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setActive(true);
+        user.addAuthority(Role.ROLE_TRAINER);
 
         TrainingType specialization = trainingTypeRepository.findAll().stream()
                 .filter(t -> t.getId().equals(specializationId))
@@ -77,6 +79,7 @@ public class TrainerServiceImpl implements TrainerService {
         trainerRepository.save(trainer);
         gymMetrics.incrementTrainerCreated();
         log.info("Created trainer profile username={}", username);
+        trainer.getUser().setPassword(rawPassword);
         return trainer;
     }
 

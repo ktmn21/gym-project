@@ -8,6 +8,7 @@ import com.example.gymcrm.model.User;
 import com.example.gymcrm.service.AuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,10 +18,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private static final Logger log = LoggerFactory.getLogger(AuthenticationServiceImpl.class);
     private final UserRepository userRepository;
     private final GymMetrics gymMetrics;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthenticationServiceImpl(UserRepository userRepository, GymMetrics gymMetrics) {
+    public AuthenticationServiceImpl(UserRepository userRepository, GymMetrics gymMetrics, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.gymMetrics = gymMetrics;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -32,7 +35,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     return new AuthenticationException("Invalid username or password");
                 });
 
-        if (!user.getPassword().equals(password)) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             log.warn("Authentication failed: password mismatch for username={}", username);
             gymMetrics.incrementAuthFailure();
             throw new AuthenticationException("Invalid username or password");
