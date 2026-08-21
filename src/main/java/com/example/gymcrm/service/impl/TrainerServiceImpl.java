@@ -1,11 +1,12 @@
 package com.example.gymcrm.service.impl;
 
-import com.example.gymcrm.dao.TrainerDao;
-import com.example.gymcrm.dao.TrainingDao;
-import com.example.gymcrm.dao.TrainingTypeDao;
-import com.example.gymcrm.dao.UserDao;
+import com.example.gymcrm.dao.TrainerRepository;
+import com.example.gymcrm.dao.TrainingRepository;
+import com.example.gymcrm.dao.TrainingTypeRepository;
+import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
+import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.*;
 import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TraineeService;
@@ -25,22 +26,24 @@ public class TrainerServiceImpl implements TrainerService {
 
     private static final Logger log = LoggerFactory.getLogger(TrainerServiceImpl.class);
 
-    private final TrainerDao trainerDao;
-    private final TrainingDao trainingDao;
-    private final TrainingTypeDao trainingTypeDao;
-    private final UserDao userDao;
+    private final TrainerRepository trainerRepository;
+    private final TrainingRepository trainingRepository;
+    private final TrainingTypeRepository trainingTypeRepository;
+    private final UserRepository userRepository;
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
+    private final GymMetrics gymMetrics;
 
-    public TrainerServiceImpl(TrainerDao trainerDao, TrainingDao trainingDao, TrainingTypeDao trainingTypeDao,
-                              UserDao userDao, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService) {
-        this.trainerDao = trainerDao;
-        this.trainingDao = trainingDao;
-        this.trainingTypeDao = trainingTypeDao;
-        this.userDao = userDao;
+    public TrainerServiceImpl(TrainerRepository trainerRepository, TrainingRepository trainingRepository, TrainingTypeRepository trainingTypeRepository,
+                              UserRepository userRepository, UsernamePasswordGenerator generator,
+                              AuthenticationService authenticationService, GymMetrics gymMetrics) {
+        this.trainerRepository = trainerRepository;
+        this.trainingRepository = trainingRepository;
+        this.trainingTypeRepository = trainingTypeRepository;
+        this.userRepository = userRepository;
         this.generator = generator;
         this.authenticationService = authenticationService;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
@@ -52,7 +55,7 @@ public class TrainerServiceImpl implements TrainerService {
             throw new ValidationException("specializationId is required");
         }
 
-        String username = generator.generateUsername(firstName, lastName, userDao::existsByUsername);
+        String username = generator.generateUsername(firstName, lastName, userRepository::existsByUsername);
         String password = generator.generatePassword();
 
         User user = new User();
@@ -62,7 +65,7 @@ public class TrainerServiceImpl implements TrainerService {
         user.setPassword(password);
         user.setActive(true);
 
-        TrainingType specialization = trainingTypeDao.findAll().stream()
+        TrainingType specialization = trainingTypeRepository.findAll().stream()
                 .filter(t -> t.getId().equals(specializationId))
                 .findFirst()
                 .orElseThrow(() -> new EntityNotFoundException("TrainingType not found id=" + specializationId));
@@ -71,7 +74,8 @@ public class TrainerServiceImpl implements TrainerService {
         trainer.setUser(user);
         trainer.setSpecialization(specialization);
 
-        trainerDao.save(trainer);
+        trainerRepository.save(trainer);
+        gymMetrics.incrementTrainerCreated();
         log.info("Created trainer profile username={}", username);
         return trainer;
     }
@@ -95,14 +99,14 @@ public class TrainerServiceImpl implements TrainerService {
         trainer.getUser().setLastName(lastName);
 
         if(specializationId != null){
-            TrainingType specialization = trainingTypeDao.findAll().stream()
+            TrainingType specialization = trainingTypeRepository.findAll().stream()
                     .filter(t -> t.getId().equals(specializationId))
                     .findFirst()
                     .orElseThrow(() -> new EntityNotFoundException("TrainingType not found id=" + specializationId));
             trainer.setSpecialization(specialization);
         }
 
-        Trainer updated = trainerDao.update(trainer);
+        Trainer updated = trainerRepository.save(trainer);
         log.info("Updated trainer profile username={}", username);
         return updated;
     }
@@ -115,7 +119,7 @@ public class TrainerServiceImpl implements TrainerService {
 
         Trainer trainer = findOrThrow(username);
         trainer.getUser().setPassword(newPassword);
-        trainerDao.update(trainer);
+        trainerRepository.save(trainer);
         log.info("Changed password for trainer username={}", username);
     }
 
@@ -128,29 +132,29 @@ public class TrainerServiceImpl implements TrainerService {
         boolean newState = !trainer.getUser().isActive();
         trainer.getUser().setActive(newState);
 
-        trainerDao.update(trainer);
+        trainerRepository.save(trainer);
         log.info("Toggled active to {} for trainer username={}", newState, username);
     }
 
     @Override
     public List<Training> getTrainerTrainings(String username, String password, LocalDate fromDate, LocalDate toDate, String traineeName) {
         authenticationService.authenticate(username, password);
-        return trainingDao.findTrainerTrainings(username, fromDate, toDate, traineeName);
+        return trainingRepository.findTrainerTrainings(username, fromDate, toDate, traineeName);
     }
 
     @Override
     @Transactional
     public void setActiveStatus(String username, String password, boolean isActive) {
         authenticationService.authenticate(username, password);
-        Trainer trainer = trainerDao.findByUsername(username)
+        Trainer trainer = trainerRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + username));
         trainer.getUser().setActive(isActive);
-        trainerDao.update(trainer);
+        trainerRepository.save(trainer);
         log.info("Set active={} for trainer username={}", isActive, username);
     }
 
     private Trainer findOrThrow(String username) {
-        return trainerDao.findByUsername(username)
+        return trainerRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + username));
     }
 

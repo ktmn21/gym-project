@@ -1,8 +1,5 @@
 package com.example.gymcrm.dao;
 
-import com.example.gymcrm.config.AppConfig;
-import com.example.gymcrm.config.TestPersistenceConfig;
-import com.example.gymcrm.dao.implementations.TrainingDaoImpl;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
@@ -13,11 +10,8 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,13 +19,11 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = TestPersistenceConfig.class)
-@Transactional
-class TrainingDaoImplTest {
+@DataJpaTest
+class TrainingRepositoryTest {
 
     @Autowired
-    private TrainingDaoImpl trainingDao;
+    private TrainingRepository trainingDao;
 
     @PersistenceContext
     private EntityManager em;

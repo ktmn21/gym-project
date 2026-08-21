@@ -1,11 +1,12 @@
 package com.example.gymcrm.service.impl;
 
-import com.example.gymcrm.dao.TraineeDao;
-import com.example.gymcrm.dao.TrainerDao;
-import com.example.gymcrm.dao.TrainingDao;
-import com.example.gymcrm.dao.UserDao;
+import com.example.gymcrm.dao.TraineeRepository;
+import com.example.gymcrm.dao.TrainerRepository;
+import com.example.gymcrm.dao.TrainingRepository;
+import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
+import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.LocalDate;
 import java.util.*;
 
@@ -26,22 +28,25 @@ public class TraineeServiceImpl implements TraineeService {
 
     private static final Logger log = LoggerFactory.getLogger(TraineeServiceImpl.class);
 
-    private final TraineeDao traineeDao;
-    private final TrainerDao trainerDao;
-    private final TrainingDao trainingDao;
-    private final UserDao userDao;
+    private final TraineeRepository traineeRepository;
+    private final TrainerRepository trainerRepository;
+    private final TrainingRepository trainingRepository;
+    private final UserRepository userRepository;
     private final UsernamePasswordGenerator generator;
     private final AuthenticationService authenticationService;
 
-    public TraineeServiceImpl(TraineeDao traineeDao, TrainerDao trainerDao, TrainingDao trainingDao,
-                              UserDao userDao, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService) {
-        this.traineeDao = traineeDao;
-        this.trainerDao = trainerDao;
-        this.trainingDao = trainingDao;
-        this.userDao = userDao;
+    private final GymMetrics gymMetrics;
+
+    public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository, TrainingRepository trainingRepository,
+                              UserRepository userRepository, UsernamePasswordGenerator generator,
+                              AuthenticationService authenticationService, GymMetrics gymMetrics) {
+        this.traineeRepository = traineeRepository;
+        this.trainerRepository = trainerRepository;
+        this.trainingRepository = trainingRepository;
+        this.userRepository = userRepository;
         this.generator = generator;
         this.authenticationService = authenticationService;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
@@ -50,7 +55,7 @@ public class TraineeServiceImpl implements TraineeService {
         validateRequired(firstName, "firstName");
         validateRequired(lastName, "lastName");
 
-        String username = generator.generateUsername(firstName, lastName, userDao::existsByUsername);
+        String username = generator.generateUsername(firstName, lastName, userRepository::existsByUsername);
         String password = generator.generatePassword();
 
         User user = new User();
@@ -65,7 +70,8 @@ public class TraineeServiceImpl implements TraineeService {
         trainee.setDateOfBirth(dateOfBirth);
         trainee.setAddress(address);
 
-        traineeDao.save(trainee);
+        traineeRepository.save(trainee);
+        gymMetrics.incrementTraineeCreated();
         log.info("Created trainee profile username={}", username);
         return trainee;
     }
@@ -89,7 +95,7 @@ public class TraineeServiceImpl implements TraineeService {
         trainee.setDateOfBirth(dateOfBirth);
         trainee.setAddress(address);
 
-        Trainee updated = traineeDao.update(trainee);
+        Trainee updated = traineeRepository.save(trainee);
         log.info("Updated trainee profile username={}", username);
         return updated;
     }
@@ -102,7 +108,7 @@ public class TraineeServiceImpl implements TraineeService {
 
         Trainee trainee = findOrThrow(username);
         trainee.getUser().setPassword(newPassword);
-        traineeDao.update(trainee);
+        traineeRepository.save(trainee);
         log.info("Changed password for trainee username={}", username);
     }
 
@@ -112,10 +118,10 @@ public class TraineeServiceImpl implements TraineeService {
         authenticationService.authenticate(username, password);
         Trainee trainee = findOrThrow(username);
 
-        boolean newState = !trainee.getUser().isActive();   // ← FLIP the current value
+        boolean newState = !trainee.getUser().isActive();
         trainee.getUser().setActive(newState);
 
-        traineeDao.update(trainee);
+        traineeRepository.save(trainee);
         log.info("Toggled active to {} for trainee username={}", newState, username);
     }
 
@@ -124,21 +130,21 @@ public class TraineeServiceImpl implements TraineeService {
     public void deleteByUsername(String username, String password) {
         authenticationService.authenticate(username, password);
         Trainee trainee = findOrThrow(username);
-        traineeDao.delete(trainee);
+        traineeRepository.delete(trainee);
         log.info("Deleted trainee username={} (cascade removed trainings)", username);
     }
 
     @Override
     public List<Training> getTraineeTrainings(String username, String password, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
         authenticationService.authenticate(username, password);
-        return trainingDao.findTraineeTrainings(username, fromDate, toDate, trainerName, trainingTypeName);
+        return trainingRepository.findTraineeTrainings(username, fromDate, toDate, trainerName, trainingTypeName);
     }
 
     @Override
     public List<Trainer> getTrainersNotAssigned(String username, String password) {
 
         authenticationService.authenticate(username, password);
-        return trainerDao.findAllNotAssignedToTrainee(username);
+        return trainerRepository.findAllNotAssignedToTrainee(username);
 
     }
 
@@ -149,7 +155,7 @@ public class TraineeServiceImpl implements TraineeService {
         Trainee trainee = findOrThrow(username);
 
         Set<Trainer> currentTrainers = new HashSet<>(trainee.getTrainers());
-        Set<Trainer> availableTrainers = new HashSet<>(trainerDao.findAllNotAssignedToTrainee(username));
+        Set<Trainer> availableTrainers = new HashSet<>(trainerRepository.findAllNotAssignedToTrainee(username));
 
         Map<Long, Trainer> allowedById = new HashMap<>();
         for (Trainer trainer : currentTrainers) {
@@ -178,7 +184,7 @@ public class TraineeServiceImpl implements TraineeService {
             trainer.getTrainees().add(trainee);
         }
 
-        Trainee updated = traineeDao.update(trainee);
+        Trainee updated = traineeRepository.save(trainee);
         log.info("Updated trainers list for trainee username={}, count={}", username, newTrainers.size());
         return updated;
     }
@@ -189,7 +195,7 @@ public class TraineeServiceImpl implements TraineeService {
         authenticationService.authenticate(username, password);
         Trainee trainee = findOrThrow(username);
         trainee.getUser().setActive(isActive);
-        traineeDao.update(trainee);
+        traineeRepository.save(trainee);
         log.info("Set active={} for trainee username={}", isActive, username);
     }
 
@@ -201,7 +207,7 @@ public class TraineeServiceImpl implements TraineeService {
 
         Set<Trainer> newTrainers = new HashSet<>();
         for (String trainerUsername : trainerUsernames) {
-            Trainer trainer = trainerDao.findByUsername(trainerUsername)
+            Trainer trainer = trainerRepository.findByUsername(trainerUsername)
                     .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + trainerUsername));
             newTrainers.add(trainer);
         }
@@ -216,13 +222,13 @@ public class TraineeServiceImpl implements TraineeService {
             trainer.getTrainees().add(trainee);
         }
 
-        Trainee updated = traineeDao.update(trainee);
+        Trainee updated = traineeRepository.save(trainee);
         log.info("Updated trainers list for trainee username={}, count={}", username, newTrainers.size());
         return updated;
     }
 
     private Trainee findOrThrow(String username) {
-        return traineeDao.findByUserName(username)
+        return traineeRepository.findByUserName(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee not found username=" + username));
     }
 
