@@ -2,6 +2,9 @@ package com.example.gymcrm.model;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 public class User {
@@ -25,6 +28,9 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<Authority> authorities = new ArrayList<>();
+
     public User() {}
 
     public Long getId() { return id; }
@@ -39,4 +45,11 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+    public List<Authority> getAuthorities() { return authorities; }
+    public void setAuthorities(List<Authority> authorities) { this.authorities = authorities; }
+
+    public void addAuthority(Role role) {
+        Authority auth = new Authority(this, role);
+        this.authorities.add(auth);
+    }
 }
