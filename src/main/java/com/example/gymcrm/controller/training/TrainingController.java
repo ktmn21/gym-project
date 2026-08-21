@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -24,25 +25,25 @@ public class TrainingController {
         this.service = service;
     }
 
-    @Operation(summary = "Add a training session")
+    @Operation(summary = "Add a training session", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Training added"),
             @ApiResponse(responseCode = "400", description = "Validation failed",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication failed",
+            @ApiResponse(responseCode = "401", description = "Authentication required",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "Trainee or trainer not found",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping
     public ResponseEntity<Void> addTraining(
-            @RequestHeader("X-Password") String password,
             @Valid @RequestBody AddTrainingRequest request) {
 
         service.addTraining(
-                request.getTraineeUsername(), password,
+                request.getTraineeUsername(),
                 request.getTrainerUsername(),
                 request.getTrainingName(),
+                request.getTrainingTypeName(),
                 request.getTrainingDate(),
                 request.getTrainingDuration());
 

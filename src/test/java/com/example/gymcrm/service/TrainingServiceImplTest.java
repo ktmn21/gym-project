@@ -36,13 +36,11 @@ class TrainingServiceImplTest {
     @Mock private TrainerRepository trainerRepository;
     @Mock private TrainingRepository trainingRepository;
     @Mock private TrainingTypeRepository trainingTypeRepository;
-    @Mock private AuthenticationService authenticationService;
 
     @InjectMocks
     private TrainingServiceImpl service;
 
     private static final String TRAINEE_USERNAME = "John.Doe";
-    private static final String TRAINEE_PASSWORD = "secret123";
     private static final String TRAINER_USERNAME = "Jane.Smith";
     private static final String TRAINING_NAME    = "Morning Cardio";
     private static final String TRAINING_TYPE    = "Cardio";
@@ -68,7 +66,7 @@ class TrainingServiceImplTest {
     }
 
     private Training callAddTraining() {
-        return service.addTraining(TRAINEE_USERNAME, TRAINEE_PASSWORD, TRAINER_USERNAME,
+        return service.addTraining(TRAINEE_USERNAME, TRAINER_USERNAME,
                 TRAINING_NAME, TRAINING_TYPE, TRAINING_DATE, DURATION);
     }
 
@@ -92,7 +90,6 @@ class TrainingServiceImplTest {
             assertEquals(TRAINING_DATE, result.getTrainingDate());
             assertEquals(DURATION, result.getTrainingDuration());
 
-            verify(authenticationService).authenticate(TRAINEE_USERNAME, TRAINEE_PASSWORD);
             verify(trainingRepository).save(any(Training.class));
         }
 
@@ -115,33 +112,16 @@ class TrainingServiceImplTest {
         }
 
         @Test
-        @DisplayName("HAPPY: authenticate is called BEFORE any repository interaction")
-        void addTraining_authOrder() {
+        @DisplayName("HAPPY: trainee is looked up before saving the training")
+        void addTraining_lookupOrder() {
             stubAllFound();
             when(trainingRepository.save(any(Training.class))).thenAnswer(inv -> inv.getArgument(0));
 
             callAddTraining();
 
-            InOrder order = inOrder(authenticationService, traineeRepository, trainingRepository);
-            order.verify(authenticationService).authenticate(TRAINEE_USERNAME, TRAINEE_PASSWORD);
+            InOrder order = inOrder(traineeRepository, trainingRepository);
             order.verify(traineeRepository).findByUserName(TRAINEE_USERNAME);
             order.verify(trainingRepository).save(any(Training.class));
-        }
-    }
-
-    @Nested
-    @DisplayName("addTraining - authentication")
-    class Authentication {
-
-        @Test
-        @DisplayName("UNHAPPY: throws when authentication fails and touches no repository")
-        void addTraining_authFails() {
-            doThrow(new ValidationException("Bad credentials"))
-                    .when(authenticationService).authenticate(TRAINEE_USERNAME, TRAINEE_PASSWORD);
-
-            assertThrows(ValidationException.class, TrainingServiceImplTest.this::callAddTraining);
-
-            verifyNoInteractions(traineeRepository, trainerRepository, trainingTypeRepository, trainingRepository);
         }
     }
 
@@ -153,7 +133,7 @@ class TrainingServiceImplTest {
         @DisplayName("UNHAPPY: throws when trainingName is blank")
         void addTraining_blankName() {
             ValidationException ex = assertThrows(ValidationException.class, () ->
-                    service.addTraining(TRAINEE_USERNAME, TRAINEE_PASSWORD, TRAINER_USERNAME,
+                    service.addTraining(TRAINEE_USERNAME, TRAINER_USERNAME,
                             "  ", TRAINING_TYPE, TRAINING_DATE, DURATION));
             assertTrue(ex.getMessage().contains("trainingName"));
             verify(trainingRepository, never()).save(any());
@@ -163,7 +143,7 @@ class TrainingServiceImplTest {
         @DisplayName("UNHAPPY: throws when trainingName is null")
         void addTraining_nullName() {
             assertThrows(ValidationException.class, () ->
-                    service.addTraining(TRAINEE_USERNAME, TRAINEE_PASSWORD, TRAINER_USERNAME,
+                    service.addTraining(TRAINEE_USERNAME, TRAINER_USERNAME,
                             null, TRAINING_TYPE, TRAINING_DATE, DURATION));
             verify(trainingRepository, never()).save(any());
         }
@@ -172,7 +152,7 @@ class TrainingServiceImplTest {
         @DisplayName("UNHAPPY: throws when trainingTypeName is blank")
         void addTraining_blankType() {
             ValidationException ex = assertThrows(ValidationException.class, () ->
-                    service.addTraining(TRAINEE_USERNAME, TRAINEE_PASSWORD, TRAINER_USERNAME,
+                    service.addTraining(TRAINEE_USERNAME, TRAINER_USERNAME,
                             TRAINING_NAME, "", TRAINING_DATE, DURATION));
             assertTrue(ex.getMessage().contains("trainingTypeName"));
             verify(trainingRepository, never()).save(any());
@@ -182,7 +162,7 @@ class TrainingServiceImplTest {
         @DisplayName("UNHAPPY: throws when trainingDate is null")
         void addTraining_nullDate() {
             ValidationException ex = assertThrows(ValidationException.class, () ->
-                    service.addTraining(TRAINEE_USERNAME, TRAINEE_PASSWORD, TRAINER_USERNAME,
+                    service.addTraining(TRAINEE_USERNAME, TRAINER_USERNAME,
                             TRAINING_NAME, TRAINING_TYPE, null, DURATION));
             assertTrue(ex.getMessage().contains("trainingDate"));
             verify(trainingRepository, never()).save(any());
@@ -192,7 +172,7 @@ class TrainingServiceImplTest {
         @DisplayName("UNHAPPY: throws when trainingDuration is null")
         void addTraining_nullDuration() {
             ValidationException ex = assertThrows(ValidationException.class, () ->
-                    service.addTraining(TRAINEE_USERNAME, TRAINEE_PASSWORD, TRAINER_USERNAME,
+                    service.addTraining(TRAINEE_USERNAME, TRAINER_USERNAME,
                             TRAINING_NAME, TRAINING_TYPE, TRAINING_DATE, null));
             assertTrue(ex.getMessage().contains("trainingDuration"));
             verify(trainingRepository, never()).save(any());

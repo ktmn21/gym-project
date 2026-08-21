@@ -2,7 +2,6 @@ package com.example.gymcrm.controller;
 
 import com.example.gymcrm.controller.training.TrainingController;
 import com.example.gymcrm.exceptions.GlobalExceptionHandler;
-import com.example.gymcrm.exceptions.AuthenticationException;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.model.Training;
 import com.example.gymcrm.service.TrainingService;
@@ -33,8 +32,6 @@ class TrainingControllerTest {
     @InjectMocks private TrainingController controller;
     private MockMvc mockMvc;
 
-    private static final String PASSWORD = "pass123";
-
     @BeforeEach
     void setup() {
         ObjectMapper mapper = new ObjectMapper();
@@ -50,20 +47,20 @@ class TrainingControllerTest {
     @DisplayName("HAPPY: valid training returns 200")
     void add_success() throws Exception {
         when(service.addTraining(anyString(), anyString(), anyString(),
-                anyString(), any(), any(), anyInt())).thenReturn(new Training());
+                anyString(), any(), anyInt())).thenReturn(new Training());
 
         String body = """
                 {
                     "traineeUsername": "John.Doe",
                     "trainerUsername": "Jane.Smith",
                     "trainingName": "Morning Cardio",
+                    "trainingTypeName": "Cardio",
                     "trainingDate": "2024-05-20",
                     "trainingDuration": 60
                 }
                 """;
 
         mockMvc.perform(post("/training")
-                        .header("X-Password", PASSWORD)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk());
     }
@@ -75,12 +72,29 @@ class TrainingControllerTest {
                 {
                     "traineeUsername": "John.Doe",
                     "trainingName": "Morning Cardio",
+                    "trainingTypeName": "Cardio",
                     "trainingDate": "2024-05-20",
                     "trainingDuration": 60
                 }
                 """;
         mockMvc.perform(post("/training")
-                        .header("X-Password", PASSWORD)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("UNHAPPY: missing trainingTypeName returns 400")
+    void add_missingType() throws Exception {
+        String body = """
+                {
+                    "traineeUsername": "John.Doe",
+                    "trainerUsername": "Jane.Smith",
+                    "trainingName": "Morning Cardio",
+                    "trainingDate": "2024-05-20",
+                    "trainingDuration": 60
+                }
+                """;
+        mockMvc.perform(post("/training")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest());
     }
@@ -93,43 +107,21 @@ class TrainingControllerTest {
                     "traineeUsername": "John.Doe",
                     "trainerUsername": "Jane.Smith",
                     "trainingName": "Morning Cardio",
+                    "trainingTypeName": "Cardio",
                     "trainingDate": "2024-05-20",
                     "trainingDuration": -5
                 }
                 """;
         mockMvc.perform(post("/training")
-                        .header("X-Password", PASSWORD)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @DisplayName("UNHAPPY: auth fails returns 401")
-    void add_authFails() throws Exception {
-        when(service.addTraining(anyString(), anyString(), anyString(),
-                anyString(), any(), any(), anyInt()))
-                .thenThrow(new AuthenticationException("Invalid credentials"));
-
-        String body = """
-                {
-                    "traineeUsername": "John.Doe",
-                    "trainerUsername": "Jane.Smith",
-                    "trainingName": "Morning Cardio",
-                    "trainingDate": "2024-05-20",
-                    "trainingDuration": 60
-                }
-                """;
-        mockMvc.perform(post("/training")
-                        .header("X-Password", PASSWORD)
-                        .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isUnauthorized());
     }
 
     @Test
     @DisplayName("UNHAPPY: trainer not found returns 404")
     void add_notFound() throws Exception {
         when(service.addTraining(anyString(), anyString(), anyString(),
-                anyString(), any(), any(), anyInt()))
+                anyString(), any(), anyInt()))
                 .thenThrow(new EntityNotFoundException("Trainer not found"));
 
         String body = """
@@ -137,12 +129,12 @@ class TrainingControllerTest {
                     "traineeUsername": "John.Doe",
                     "trainerUsername": "Ghost.Trainer",
                     "trainingName": "Morning Cardio",
+                    "trainingTypeName": "Cardio",
                     "trainingDate": "2024-05-20",
                     "trainingDuration": 60
                 }
                 """;
         mockMvc.perform(post("/training")
-                        .header("X-Password", PASSWORD)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isNotFound());
     }
