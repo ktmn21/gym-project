@@ -4,11 +4,11 @@ import com.example.gymcrm.dao.TraineeRepository;
 import com.example.gymcrm.dao.TrainerRepository;
 import com.example.gymcrm.dao.TrainingRepository;
 import com.example.gymcrm.dao.UserRepository;
+import com.example.gymcrm.exceptions.AuthenticationException;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.*;
-import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TraineeService;
 import com.example.gymcrm.util.UsernamePasswordGenerator;
 import org.slf4j.Logger;
@@ -31,20 +31,18 @@ public class TraineeServiceImpl implements TraineeService {
     private final TrainingRepository trainingRepository;
     private final UserRepository userRepository;
     private final UsernamePasswordGenerator generator;
-    private final AuthenticationService authenticationService;
     private final PasswordEncoder passwordEncoder;
 
     private final GymMetrics gymMetrics;
 
     public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository, TrainingRepository trainingRepository,
                               UserRepository userRepository, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService, GymMetrics gymMetrics, PasswordEncoder passwordEncoder) {
+                               GymMetrics gymMetrics, PasswordEncoder passwordEncoder) {
         this.traineeRepository = traineeRepository;
         this.trainerRepository = trainerRepository;
         this.trainingRepository = trainingRepository;
         this.userRepository = userRepository;
         this.generator = generator;
-        this.authenticationService = authenticationService;
         this.gymMetrics = gymMetrics;
         this.passwordEncoder = passwordEncoder;
     }
@@ -79,15 +77,13 @@ public class TraineeServiceImpl implements TraineeService {
     }
 
     @Override
-    public Trainee selectByUsername(String username, String password) {
-        authenticationService.authenticate(username, password);
+    public Trainee selectByUsername(String username) {
         return findOrThrow(username);
     }
 
     @Override
     @Transactional
-    public Trainee updateProfile(String username, String password, String firstName, String lastName, LocalDate dateOfBirth, String address) {
-        authenticationService.authenticate(username, password);
+    public Trainee updateProfile(String username, String firstName, String lastName, LocalDate dateOfBirth, String address) {
         validateRequired(firstName, "firstName");
         validateRequired(lastName, "lastName");
 
@@ -105,19 +101,21 @@ public class TraineeServiceImpl implements TraineeService {
     @Override
     @Transactional
     public void changePassword(String username, String oldPassword, String newPassword) {
-        authenticationService.authenticate(username, oldPassword);
         validateRequired(newPassword, "newPassword");
-
         Trainee trainee = findOrThrow(username);
-        trainee.getUser().setPassword(newPassword);
+
+        if (!passwordEncoder.matches(oldPassword, trainee.getUser().getPassword())) {
+            throw new AuthenticationException("Old password is incorrect");
+        }
+
+        trainee.getUser().setPassword(passwordEncoder.encode(newPassword));
         traineeRepository.save(trainee);
         log.info("Changed password for trainee username={}", username);
     }
 
     @Override
     @Transactional
-    public void toggleActive(String username, String password) {
-        authenticationService.authenticate(username, password);
+    public void toggleActive(String username) {
         Trainee trainee = findOrThrow(username);
 
         boolean newState = !trainee.getUser().isActive();
@@ -129,31 +127,27 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     @Transactional
-    public void deleteByUsername(String username, String password) {
-        authenticationService.authenticate(username, password);
+    public void deleteByUsername(String username) {
         Trainee trainee = findOrThrow(username);
         traineeRepository.delete(trainee);
         log.info("Deleted trainee username={} (cascade removed trainings)", username);
     }
 
     @Override
-    public List<Training> getTraineeTrainings(String username, String password, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
-        authenticationService.authenticate(username, password);
+    public List<Training> getTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
         return trainingRepository.findTraineeTrainings(username, fromDate, toDate, trainerName, trainingTypeName);
     }
 
     @Override
-    public List<Trainer> getTrainersNotAssigned(String username, String password) {
+    public List<Trainer> getTrainersNotAssigned(String username) {
 
-        authenticationService.authenticate(username, password);
         return trainerRepository.findAllNotAssignedToTrainee(username);
 
     }
 
     @Override
     @Transactional
-    public Trainee updateTrainersList(String username, String password, Set<Long> trainerIds) {
-        authenticationService.authenticate(username, password);
+    public Trainee updateTrainersList(String username, Set<Long> trainerIds) {
         Trainee trainee = findOrThrow(username);
 
         Set<Trainer> currentTrainers = new HashSet<>(trainee.getTrainers());
@@ -193,8 +187,7 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     @Transactional
-    public void setActiveStatus(String username, String password, boolean isActive) {
-        authenticationService.authenticate(username, password);
+    public void setActiveStatus(String username, boolean isActive) {
         Trainee trainee = findOrThrow(username);
         trainee.getUser().setActive(isActive);
         traineeRepository.save(trainee);
@@ -203,8 +196,7 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     @Transactional
-    public Trainee updateTrainersListByUsername(String username, String password, Set<String> trainerUsernames) {
-        authenticationService.authenticate(username, password);
+    public Trainee updateTrainersListByUsername(String username, Set<String> trainerUsernames) {
         Trainee trainee = findOrThrow(username);
 
         Set<Trainer> newTrainers = new HashSet<>();

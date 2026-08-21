@@ -10,7 +10,6 @@ import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
 import com.example.gymcrm.model.TrainingType;
-import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TrainingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,21 +27,18 @@ public class TrainingServiceImpl implements TrainingService {
     private final TrainerRepository trainerRepository;
     private final TrainingRepository trainingRepository;
     private final TrainingTypeRepository trainingTypeRepository;
-    private final AuthenticationService authenticationService;
 
     public TrainingServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository, TrainingRepository trainingRepository,
-                               TrainingTypeRepository trainingTypeRepository, AuthenticationService authenticationService) {
+                               TrainingTypeRepository trainingTypeRepository) {
         this.traineeRepository = traineeRepository;
         this.trainerRepository = trainerRepository;
         this.trainingRepository = trainingRepository;
         this.trainingTypeRepository = trainingTypeRepository;
-        this.authenticationService = authenticationService;
     }
 
     @Override
     @Transactional
-    public Training addTraining(String traineeUsername, String traineePassword, String trainerUsername, String trainingName, String trainingTypeName, LocalDate trainingDate, Integer trainingDuration) {
-        authenticationService.authenticate(traineeUsername, traineePassword);
+    public Training addTraining(String traineeUsername, String trainerUsername, String trainingName, String trainingTypeName, LocalDate trainingDate, Integer trainingDuration) {
 
         require(trainingName, "trainingName");
         require(trainingTypeName, "trainingTypeName");

@@ -3,6 +3,7 @@ package com.example.gymcrm.controller.trainer;
 import com.example.gymcrm.dto.error.ErrorResponse;
 import com.example.gymcrm.dto.trainer.*;
 import com.example.gymcrm.model.Trainer;
+import com.example.gymcrm.security.SecurityUtils;
 import com.example.gymcrm.service.TrainerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,9 +26,11 @@ import java.util.stream.Collectors;
 public class TrainerController {
 
     private final TrainerService service;
+    private final SecurityUtils securityUtils;
 
-    public TrainerController(TrainerService service) {
+    public TrainerController(TrainerService service, SecurityUtils securityUtils) {
         this.service = service;
+        this.securityUtils = securityUtils;
     }
 
     @Operation(summary = "Register a new trainer")
@@ -61,9 +64,10 @@ public class TrainerController {
     })
     @GetMapping("/{username}")
     public ResponseEntity<TrainerProfileResponse> getProfile(
-            @PathVariable("username") String username,
-            @RequestHeader("X-Password") String password) {
-        Trainer trainer = service.selectByUsername(username, password);
+            @PathVariable("username") String username) {
+
+        securityUtils.checkOwnership(username);
+        Trainer trainer = service.selectByUsername(username);
         return ResponseEntity.ok(TrainerMapper.toProfileResponse(trainer));
     }
 
@@ -79,15 +83,16 @@ public class TrainerController {
     @PutMapping("/{username}")
     public ResponseEntity<TrainerProfileResponse> updateProfile(
             @PathVariable("username") String username,
-            @RequestHeader("X-Password") String password,
             @Valid @RequestBody TrainerUpdateRequest request) {
 
-        Trainer trainer = service.updateProfile(username, password,
+        securityUtils.checkOwnership(username);
+
+        Trainer trainer = service.updateProfile(username,
                 request.getFirstName(), request.getLastName(), null);
 
         if (request.getIsActive() != null
                 && request.getIsActive() != trainer.getUser().isActive()) {
-            service.setActiveStatus(username, password, request.getIsActive());
+            service.setActiveStatus(username, request.getIsActive());
             trainer.getUser().setActive(request.getIsActive());
         }
 
@@ -104,15 +109,16 @@ public class TrainerController {
     @GetMapping("/{username}/trainings")
     public ResponseEntity<List<TrainerTrainingResponse>> getTrainings(
             @PathVariable("username") String username,
-            @RequestHeader("X-Password") String password,
             @RequestParam(value = "fromDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(value = "toDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(value = "traineeName", required = false) String traineeName) {
 
+        securityUtils.checkOwnership(username);
+
         List<TrainerTrainingResponse> trainings = service.getTrainerTrainings(
-                        username, password, fromDate, toDate, traineeName)
+                        username, fromDate, toDate, traineeName)
                 .stream().map(TrainerMapper::toTrainingResponse).collect(Collectors.toList());
         return ResponseEntity.ok(trainings);
     }
@@ -128,9 +134,9 @@ public class TrainerController {
     @PatchMapping("/{username}/status")
     public ResponseEntity<Void> setActiveStatus(
             @PathVariable("username") String username,
-            @RequestHeader("X-Password") String password,
             @Valid @RequestBody ActiveStatusRequest request) {
-        service.setActiveStatus(username, password, request.getIsActive());
+        securityUtils.checkOwnership(username);
+        service.setActiveStatus(username, request.getIsActive());
         return ResponseEntity.ok().build();
     }
 }

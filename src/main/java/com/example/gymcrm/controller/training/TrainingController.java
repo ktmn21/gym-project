@@ -43,7 +43,6 @@ public class TrainingController {
                 request.getTraineeUsername(), password,
                 request.getTrainerUsername(),
                 request.getTrainingName(),
-                null,
                 request.getTrainingDate(),
                 request.getTrainingDuration());
 

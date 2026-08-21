@@ -12,25 +12,25 @@ public interface TraineeService {
 
     Trainee createProfile(String firstName, String lastName, LocalDate dateOfBirth, String address);
 
-    Trainee selectByUsername(String username, String password);
+    Trainee selectByUsername(String username);
 
-    Trainee updateProfile(String username, String password, String firstName, String lastName,
+    Trainee updateProfile(String username, String firstName, String lastName,
                            LocalDate dateOfBirth, String address);
 
     void changePassword(String username, String oldPassword, String newPassword);
 
-    void toggleActive(String username, String password);
+    void toggleActive(String username);
 
-    void deleteByUsername(String username, String password);
+    void deleteByUsername(String username);
 
-    List<Training> getTraineeTrainings(String username, String password, LocalDate fromDate, LocalDate toDate,
+    List<Training> getTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate,
                                         String trainerName, String trainingTypeName);
 
-    List<Trainer> getTrainersNotAssigned(String username, String password);
+    List<Trainer> getTrainersNotAssigned(String username);
 
-    Trainee updateTrainersList(String username, String password, Set<Long> trainerIds);
+    Trainee updateTrainersList(String username, Set<Long> trainerIds);
 
-    Trainee updateTrainersListByUsername(String username, String password, Set<String> trainerUsernames);
+    Trainee updateTrainersListByUsername(String username, Set<String> trainerUsernames);
 
-    void setActiveStatus(String username, String password, boolean isActive);
+    void setActiveStatus(String username, boolean isActive);
 }

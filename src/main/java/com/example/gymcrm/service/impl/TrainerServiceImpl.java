@@ -4,11 +4,11 @@ import com.example.gymcrm.dao.TrainerRepository;
 import com.example.gymcrm.dao.TrainingRepository;
 import com.example.gymcrm.dao.TrainingTypeRepository;
 import com.example.gymcrm.dao.UserRepository;
+import com.example.gymcrm.exceptions.AuthenticationException;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.metrics.GymMetrics;
 import com.example.gymcrm.model.*;
-import com.example.gymcrm.service.AuthenticationService;
 import com.example.gymcrm.service.TrainerService;
 import com.example.gymcrm.util.UsernamePasswordGenerator;
 import org.slf4j.Logger;
@@ -30,19 +30,17 @@ public class TrainerServiceImpl implements TrainerService {
     private final TrainingTypeRepository trainingTypeRepository;
     private final UserRepository userRepository;
     private final UsernamePasswordGenerator generator;
-    private final AuthenticationService authenticationService;
     private final GymMetrics gymMetrics;
     private final PasswordEncoder passwordEncoder;
 
     public TrainerServiceImpl(TrainerRepository trainerRepository, TrainingRepository trainingRepository, TrainingTypeRepository trainingTypeRepository,
                               UserRepository userRepository, UsernamePasswordGenerator generator,
-                              AuthenticationService authenticationService, GymMetrics gymMetrics, PasswordEncoder passwordEncoder) {
+                              GymMetrics gymMetrics, PasswordEncoder passwordEncoder) {
         this.trainerRepository = trainerRepository;
         this.trainingRepository = trainingRepository;
         this.trainingTypeRepository = trainingTypeRepository;
         this.userRepository = userRepository;
         this.generator = generator;
-        this.authenticationService = authenticationService;
         this.gymMetrics = gymMetrics;
         this.passwordEncoder = passwordEncoder;
     }
@@ -85,15 +83,15 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional
-    public Trainer selectByUsername(String username, String password) {
-        authenticationService.authenticate(username, password);
+    public Trainer selectByUsername(String username) {
+
         return findOrThrow(username);
     }
 
     @Override
     @Transactional
-    public Trainer updateProfile(String username, String password, String firstName, String lastName, Long specializationId) {
-        authenticationService.authenticate(username, password);
+    public Trainer updateProfile(String username, String firstName, String lastName, Long specializationId) {
+
         validateRequired(firstName, "firstName");
         validateRequired(lastName, "lastName");
 
@@ -117,19 +115,22 @@ public class TrainerServiceImpl implements TrainerService {
     @Override
     @Transactional
     public void changePassword(String username, String oldPassword, String newPassword) {
-        authenticationService.authenticate(username, oldPassword);
         validateRequired(newPassword, "newPassword");
-
         Trainer trainer = findOrThrow(username);
-        trainer.getUser().setPassword(newPassword);
+
+        if (!passwordEncoder.matches(oldPassword, trainer.getUser().getPassword())) {
+            throw new AuthenticationException("Old password is incorrect");
+        }
+
+        trainer.getUser().setPassword(passwordEncoder.encode(newPassword));
         trainerRepository.save(trainer);
-        log.info("Changed password for trainer username={}", username);
+        log.info("Changed password for trainee username={}", username);
     }
 
     @Override
     @Transactional
-    public void toggleActive(String username, String password) {
-        authenticationService.authenticate(username, password);
+    public void toggleActive(String username) {
+
         Trainer trainer = findOrThrow(username);
 
         boolean newState = !trainer.getUser().isActive();
@@ -140,15 +141,15 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    public List<Training> getTrainerTrainings(String username, String password, LocalDate fromDate, LocalDate toDate, String traineeName) {
-        authenticationService.authenticate(username, password);
+    public List<Training> getTrainerTrainings(String username, LocalDate fromDate, LocalDate toDate, String traineeName) {
+
         return trainingRepository.findTrainerTrainings(username, fromDate, toDate, traineeName);
     }
 
     @Override
     @Transactional
-    public void setActiveStatus(String username, String password, boolean isActive) {
-        authenticationService.authenticate(username, password);
+    public void setActiveStatus(String username, boolean isActive) {
+
         Trainer trainer = trainerRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer not found username=" + username));
         trainer.getUser().setActive(isActive);
