@@ -45,7 +45,9 @@ public class TrainerController {
         Trainer trainer = service.createProfile(
                 request.getFirstName(), request.getLastName(), request.getSpecializationId());
         return ResponseEntity.ok(new TrainerRegistrationResponse(
-                trainer.getUser().getUsername(), trainer.getUser().getPassword()));
+                trainer.getUser().getUsername(),
+                trainer.getUser().getRawPassword()
+        ));
     }
 
     @Operation(summary = "Get trainer profile")

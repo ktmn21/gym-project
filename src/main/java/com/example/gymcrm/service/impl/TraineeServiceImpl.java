@@ -65,6 +65,7 @@ public class TraineeServiceImpl implements TraineeService {
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setActive(true);
         user.addAuthority(Role.ROLE_TRAINEE);
+        user.setRawPassword(rawPassword);
 
         Trainee trainee = new Trainee();
         trainee.setUser(user);
@@ -74,7 +75,6 @@ public class TraineeServiceImpl implements TraineeService {
         traineeRepository.save(trainee);
         gymMetrics.incrementTraineeCreated();
         log.info("Created trainee profile username={}", username);
-        trainee.getUser().setPassword(rawPassword);
         return trainee;
     }
 

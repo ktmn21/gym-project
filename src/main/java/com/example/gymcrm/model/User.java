@@ -25,6 +25,9 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Transient
+    private String rawPassword;
+
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
@@ -47,6 +50,9 @@ public class User {
     public void setActive(boolean active) { this.active = active; }
     public List<Authority> getAuthorities() { return authorities; }
     public void setAuthorities(List<Authority> authorities) { this.authorities = authorities; }
+
+    public String getRawPassword() { return rawPassword; }
+    public void setRawPassword(String rawPassword) { this.rawPassword = rawPassword; }
 
     public void addAuthority(Role role) {
         Authority auth = new Authority(this, role);

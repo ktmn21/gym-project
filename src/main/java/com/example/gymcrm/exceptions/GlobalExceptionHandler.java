@@ -6,6 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -79,6 +82,32 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
+        log.warn("Authentication failed: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Invalid username or password", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<ErrorResponse> handleDisabled(DisabledException ex, HttpServletRequest request) {
+        log.warn("Authentication failed - account disabled: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Account is disabled", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ErrorResponse> handleLocked(LockedException ex, HttpServletRequest request) {
+        log.warn("Authentication failed - account locked: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(HttpStatus.LOCKED.value(), "Exceeded number of permitted trials",ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.LOCKED).body(error);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.notFound().build();
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(
             Exception ex, HttpServletRequest request) {
@@ -94,8 +123,5 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Void> handleNoResource(NoResourceFoundException ex) {
-        return ResponseEntity.notFound().build();   // 404, not 500, no noisy log
-    }
+
 }

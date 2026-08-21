@@ -44,7 +44,9 @@ public class TraineeController {
         Trainee trainee = service.createProfile(request.getFirstName(), request.getLastname(),
                 request.getDateOfBirth(), request.getAddress());
         return ResponseEntity.ok(new TraineeRegistrationResponse(
-                trainee.getUser().getUsername(), trainee.getUser().getPassword()));
+                trainee.getUser().getUsername(),
+                trainee.getUser().getRawPassword()
+        ));
     }
 
     @Operation(summary = "Get trainee profile")

@@ -66,6 +66,7 @@ public class TrainerServiceImpl implements TrainerService {
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setActive(true);
         user.addAuthority(Role.ROLE_TRAINER);
+        user.setRawPassword(rawPassword);
 
         TrainingType specialization = trainingTypeRepository.findAll().stream()
                 .filter(t -> t.getId().equals(specializationId))
@@ -79,7 +80,6 @@ public class TrainerServiceImpl implements TrainerService {
         trainerRepository.save(trainer);
         gymMetrics.incrementTrainerCreated();
         log.info("Created trainer profile username={}", username);
-        trainer.getUser().setPassword(rawPassword);
         return trainer;
     }
 

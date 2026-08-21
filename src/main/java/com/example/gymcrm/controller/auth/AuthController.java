@@ -1,8 +1,9 @@
 package com.example.gymcrm.controller.auth;
 
-import com.example.gymcrm.dto.auth.ChangePasswordRequest;
+import com.example.gymcrm.dto.auth.LoginRequest;
+import com.example.gymcrm.dto.auth.LoginResponse;
 import com.example.gymcrm.dto.error.ErrorResponse;
-import com.example.gymcrm.service.AuthenticationService;
+import com.example.gymcrm.security.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -11,45 +12,39 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@Tag(name = "Authentication", description = "Login and password management")
+@Tag(name = "Authentication", description = "Login and token issuance")
 public class AuthController {
 
-    private final AuthenticationService authService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
-    public AuthController(AuthenticationService authService) {
-        this.authService = authService;
+    public AuthController(AuthenticationManager authenticationManager, JwtService jwtService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
-    @Operation(summary = "Login — verify username and password")
+    @Operation(summary = "Login — authenticate and receive a JWT")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Credentials valid"),
-            @ApiResponse(responseCode = "401", description = "Authentication failed",
+            @ApiResponse(responseCode = "200", description = "Authenticated; JWT returned",
+                    content = @Content(schema = @Schema(implementation = LoginResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @GetMapping("/login")
-    public ResponseEntity<Void> login(
-            @RequestParam("username") String username,
-            @RequestHeader("X-Password") String password) {
-        authService.authenticate(username, password);
-        return ResponseEntity.ok().build();
-    }
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
-    @Operation(summary = "Change login password")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Password changed"),
-            @ApiResponse(responseCode = "400", description = "Validation failed",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Authentication failed",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    })
-    @PutMapping("/login/{username}/password")
-    public ResponseEntity<Void> changePassword(
-            @PathVariable("username") String username,
-            @Valid @RequestBody ChangePasswordRequest request) {
-        authService.changePassword(username, request.getOldPassword(), request.getNewPassword());
-        return ResponseEntity.ok().build();
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String token = jwtService.generateToken(userDetails);
+
+        return ResponseEntity.ok(new LoginResponse(token));
     }
 }
