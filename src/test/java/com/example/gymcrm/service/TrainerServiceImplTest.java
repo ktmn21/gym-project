@@ -7,6 +7,7 @@ import com.example.gymcrm.dao.UserRepository;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.metrics.GymMetrics;
+import com.example.gymcrm.model.Role;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
 import com.example.gymcrm.model.TrainingType;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -38,14 +40,15 @@ class TrainerServiceImplTest {
     @Mock private TrainingTypeRepository trainingTypeRepository;
     @Mock private UserRepository userRepository;
     @Mock private UsernamePasswordGenerator generator;
-    @Mock private AuthenticationService authenticationService;
     @Mock private GymMetrics gymMetrics;
+    @Mock private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private TrainerServiceImpl service;
 
     private static final String USERNAME = "John.Doe";
-    private static final String PASSWORD = "secret123";
+    private static final String RAW_PASSWORD = "secret123";
+    private static final String HASHED_PASSWORD = "$2a$10$hashedvalue";
     private static final Long SPEC_ID = 1L;
 
     private User buildUser(boolean active) {
@@ -53,7 +56,7 @@ class TrainerServiceImplTest {
         user.setFirstName("John");
         user.setLastName("Doe");
         user.setUsername(USERNAME);
-        user.setPassword(PASSWORD);
+        user.setPassword(HASHED_PASSWORD);
         user.setActive(active);
         return user;
     }
@@ -77,11 +80,12 @@ class TrainerServiceImplTest {
     class CreateProfile {
 
         @Test
-        @DisplayName("HAPPY: creates trainer with generated credentials and specialization")
+        @DisplayName("HAPPY: creates trainer, hashes password, assigns role")
         void create_success() {
             TrainingType cardio = buildTrainingType(SPEC_ID, "Cardio");
             when(generator.generateUsername(eq("John"), eq("Doe"), any())).thenReturn(USERNAME);
-            when(generator.generatePassword()).thenReturn(PASSWORD);
+            when(generator.generatePassword()).thenReturn(RAW_PASSWORD);
+            when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
             when(trainingTypeRepository.findAll()).thenReturn(List.of(cardio));
             when(trainerRepository.save(any(Trainer.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -89,11 +93,14 @@ class TrainerServiceImplTest {
 
             assertNotNull(result);
             assertEquals(USERNAME, result.getUser().getUsername());
-            assertEquals(PASSWORD, result.getUser().getPassword());
+            assertEquals(HASHED_PASSWORD, result.getUser().getPassword());
+            assertEquals(RAW_PASSWORD, result.getUser().getRawPassword());
             assertTrue(result.getUser().isActive());
             assertEquals(cardio, result.getSpecialization());
+            assertTrue(result.getUser().getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority() == Role.ROLE_TRAINER));
             verify(trainerRepository).save(any(Trainer.class));
-            verify(gymMetrics).incrementTrainerCreated();   // ← verify metric
+            verify(gymMetrics).incrementTrainerCreated();
         }
 
         @Test
@@ -126,7 +133,8 @@ class TrainerServiceImplTest {
         @DisplayName("UNHAPPY: throws when specialization (TrainingType) not found")
         void create_specializationNotFound() {
             when(generator.generateUsername(anyString(), anyString(), any())).thenReturn(USERNAME);
-            when(generator.generatePassword()).thenReturn(PASSWORD);
+            when(generator.generatePassword()).thenReturn(RAW_PASSWORD);
+            when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
             when(trainingTypeRepository.findAll()).thenReturn(Collections.emptyList());
 
             EntityNotFoundException ex = assertThrows(EntityNotFoundException.class,
@@ -141,26 +149,14 @@ class TrainerServiceImplTest {
     class SelectByUsername {
 
         @Test
-        @DisplayName("HAPPY: returns trainer after authentication")
+        @DisplayName("HAPPY: returns trainer")
         void select_success() {
             Trainer trainer = buildTrainer(true);
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
-            Trainer result = service.selectByUsername(USERNAME, PASSWORD);
+            Trainer result = service.selectByUsername(USERNAME);
 
             assertSame(trainer, result);
-            verify(authenticationService).authenticate(USERNAME, PASSWORD);
-        }
-
-        @Test
-        @DisplayName("UNHAPPY: throws when authentication fails")
-        void select_authFails() {
-            doThrow(new ValidationException("Bad credentials"))
-                    .when(authenticationService).authenticate(USERNAME, PASSWORD);
-
-            assertThrows(ValidationException.class,
-                    () -> service.selectByUsername(USERNAME, PASSWORD));
-            verify(trainerRepository, never()).findByUsername(anyString());
         }
 
         @Test
@@ -169,7 +165,7 @@ class TrainerServiceImplTest {
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
-                    () -> service.selectByUsername(USERNAME, PASSWORD));
+                    () -> service.selectByUsername(USERNAME));
         }
     }
 
@@ -186,12 +182,11 @@ class TrainerServiceImplTest {
             when(trainingTypeRepository.findAll()).thenReturn(List.of(strength));
             when(trainerRepository.save(any(Trainer.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Trainer result = service.updateProfile(USERNAME, PASSWORD, "Jane", "Smith", 2L);
+            Trainer result = service.updateProfile(USERNAME, "Jane", "Smith", 2L);
 
             assertEquals("Jane", result.getUser().getFirstName());
             assertEquals("Smith", result.getUser().getLastName());
             assertEquals(strength, result.getSpecialization());
-            verify(authenticationService).authenticate(USERNAME, PASSWORD);
             verify(trainerRepository).save(trainer);
         }
 
@@ -203,7 +198,7 @@ class TrainerServiceImplTest {
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
             when(trainerRepository.save(any(Trainer.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Trainer result = service.updateProfile(USERNAME, PASSWORD, "Jane", "Smith", null);
+            Trainer result = service.updateProfile(USERNAME, "Jane", "Smith", null);
 
             assertEquals("Jane", result.getUser().getFirstName());
             assertSame(original, result.getSpecialization());
@@ -214,18 +209,7 @@ class TrainerServiceImplTest {
         @DisplayName("UNHAPPY: throws when firstName is blank")
         void update_blankFirstName() {
             assertThrows(ValidationException.class,
-                    () -> service.updateProfile(USERNAME, PASSWORD, "", "Smith", SPEC_ID));
-            verify(trainerRepository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("UNHAPPY: throws when authentication fails")
-        void update_authFails() {
-            doThrow(new ValidationException("Bad credentials"))
-                    .when(authenticationService).authenticate(USERNAME, PASSWORD);
-
-            assertThrows(ValidationException.class,
-                    () -> service.updateProfile(USERNAME, PASSWORD, "Jane", "Smith", SPEC_ID));
+                    () -> service.updateProfile(USERNAME, "", "Smith", SPEC_ID));
             verify(trainerRepository, never()).save(any());
         }
 
@@ -235,7 +219,7 @@ class TrainerServiceImplTest {
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
-                    () -> service.updateProfile(USERNAME, PASSWORD, "Jane", "Smith", SPEC_ID));
+                    () -> service.updateProfile(USERNAME, "Jane", "Smith", SPEC_ID));
         }
 
         @Test
@@ -246,7 +230,7 @@ class TrainerServiceImplTest {
             when(trainingTypeRepository.findAll()).thenReturn(Collections.emptyList());
 
             assertThrows(EntityNotFoundException.class,
-                    () -> service.updateProfile(USERNAME, PASSWORD, "Jane", "Smith", 99L));
+                    () -> service.updateProfile(USERNAME, "Jane", "Smith", 99L));
             verify(trainerRepository, never()).save(any());
         }
     }
@@ -256,15 +240,16 @@ class TrainerServiceImplTest {
     class ChangePassword {
 
         @Test
-        @DisplayName("HAPPY: changes password")
+        @DisplayName("HAPPY: changes password (verifies old, hashes new)")
         void changePassword_success() {
             Trainer trainer = buildTrainer(true);
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+            when(passwordEncoder.matches(RAW_PASSWORD, HASHED_PASSWORD)).thenReturn(true);
+            when(passwordEncoder.encode("newPass123")).thenReturn("$2a$10$newhash");
 
-            service.changePassword(USERNAME, PASSWORD, "newPass123");
+            service.changePassword(USERNAME, RAW_PASSWORD, "newPass123");
 
-            assertEquals("newPass123", trainer.getUser().getPassword());
-            verify(authenticationService).authenticate(USERNAME, PASSWORD);
+            assertEquals("$2a$10$newhash", trainer.getUser().getPassword());
             verify(trainerRepository).save(trainer);
         }
 
@@ -272,18 +257,19 @@ class TrainerServiceImplTest {
         @DisplayName("UNHAPPY: throws when new password is blank")
         void changePassword_blankNew() {
             assertThrows(ValidationException.class,
-                    () -> service.changePassword(USERNAME, PASSWORD, "   "));
+                    () -> service.changePassword(USERNAME, RAW_PASSWORD, "   "));
             verify(trainerRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("UNHAPPY: throws when authentication fails")
-        void changePassword_authFails() {
-            doThrow(new ValidationException("Bad credentials"))
-                    .when(authenticationService).authenticate(USERNAME, PASSWORD);
+        @DisplayName("UNHAPPY: throws when old password is incorrect")
+        void changePassword_wrongOld() {
+            Trainer trainer = buildTrainer(true);
+            when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
+            when(passwordEncoder.matches("wrongOld", HASHED_PASSWORD)).thenReturn(false);
 
-            assertThrows(ValidationException.class,
-                    () -> service.changePassword(USERNAME, PASSWORD, "newPass123"));
+            assertThrows(RuntimeException.class,
+                    () -> service.changePassword(USERNAME, "wrongOld", "newPass123"));
             verify(trainerRepository, never()).save(any());
         }
     }
@@ -298,7 +284,7 @@ class TrainerServiceImplTest {
             Trainer trainer = buildTrainer(true);
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
-            service.toggleActive(USERNAME, PASSWORD);
+            service.toggleActive(USERNAME);
 
             assertFalse(trainer.getUser().isActive());
             verify(trainerRepository).save(trainer);
@@ -310,7 +296,7 @@ class TrainerServiceImplTest {
             Trainer trainer = buildTrainer(false);
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
-            service.toggleActive(USERNAME, PASSWORD);
+            service.toggleActive(USERNAME);
 
             assertTrue(trainer.getUser().isActive());
             verify(trainerRepository).save(trainer);
@@ -322,24 +308,13 @@ class TrainerServiceImplTest {
             Trainer trainer = buildTrainer(true);
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.of(trainer));
 
-            service.toggleActive(USERNAME, PASSWORD);
+            service.toggleActive(USERNAME);
             assertFalse(trainer.getUser().isActive());
 
-            service.toggleActive(USERNAME, PASSWORD);
+            service.toggleActive(USERNAME);
             assertTrue(trainer.getUser().isActive());
 
             verify(trainerRepository, times(2)).save(trainer);
-        }
-
-        @Test
-        @DisplayName("UNHAPPY: throws when authentication fails")
-        void toggle_authFails() {
-            doThrow(new ValidationException("Bad credentials"))
-                    .when(authenticationService).authenticate(USERNAME, PASSWORD);
-
-            assertThrows(ValidationException.class,
-                    () -> service.toggleActive(USERNAME, PASSWORD));
-            verify(trainerRepository, never()).save(any());
         }
 
         @Test
@@ -348,7 +323,7 @@ class TrainerServiceImplTest {
             when(trainerRepository.findByUsername(USERNAME)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class,
-                    () -> service.toggleActive(USERNAME, PASSWORD));
+                    () -> service.toggleActive(USERNAME));
         }
     }
 
@@ -364,10 +339,9 @@ class TrainerServiceImplTest {
                     .thenReturn(trainings);
 
             List<Training> result = service.getTrainerTrainings(
-                    USERNAME, PASSWORD, null, null, null);
+                    USERNAME, null, null, null);
 
             assertEquals(2, result.size());
-            verify(authenticationService).authenticate(USERNAME, PASSWORD);
         }
 
         @Test
@@ -379,21 +353,10 @@ class TrainerServiceImplTest {
                     .thenReturn(Collections.emptyList());
 
             List<Training> result = service.getTrainerTrainings(
-                    USERNAME, PASSWORD, from, to, "Trainee Name");
+                    USERNAME, from, to, "Trainee Name");
 
             assertTrue(result.isEmpty());
             verify(trainingRepository).findTrainerTrainings(USERNAME, from, to, "Trainee Name");
-        }
-
-        @Test
-        @DisplayName("UNHAPPY: throws when authentication fails")
-        void getTrainings_authFails() {
-            doThrow(new ValidationException("Bad credentials"))
-                    .when(authenticationService).authenticate(USERNAME, PASSWORD);
-
-            assertThrows(ValidationException.class,
-                    () -> service.getTrainerTrainings(USERNAME, PASSWORD, null, null, null));
-            verifyNoInteractions(trainingRepository);
         }
     }
 }

@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GymCrmApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <option name="ACTIVE_PROFILES" value="dev" />
+    <envs>
+      <env name="DB_USERNAME" value="gym_user" />
+      <env name="DB_PASSWORD" value="gym_pass" />
+    </envs>
+    <module name="gym-crm" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.gymcrm.GymCrmApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

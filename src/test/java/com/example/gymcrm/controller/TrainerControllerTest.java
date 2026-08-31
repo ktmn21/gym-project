@@ -2,9 +2,9 @@ package com.example.gymcrm.controller;
 
 import com.example.gymcrm.controller.trainer.TrainerController;
 import com.example.gymcrm.exceptions.GlobalExceptionHandler;
-import com.example.gymcrm.exceptions.AuthenticationException;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.model.*;
+import com.example.gymcrm.security.SecurityUtils;
 import com.example.gymcrm.service.TrainerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -25,7 +25,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -36,12 +35,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TrainerControllerTest {
 
     @Mock private TrainerService service;
+    @Mock private SecurityUtils securityUtils;
+
     @InjectMocks private TrainerController controller;
 
     private MockMvc mockMvc;
 
     private static final String USERNAME = "Jane.Smith";
-    private static final String PASSWORD = "pass1234";
 
     @BeforeEach
     void setup() {
@@ -81,7 +81,7 @@ class TrainerControllerTest {
         @DisplayName("HAPPY: returns 200 with credentials")
         void register_success() throws Exception {
             Trainer trainer = buildTrainer(true);
-            trainer.getUser().setPassword("genPass1");
+            trainer.getUser().setRawPassword("genPass1");   // ← raw, not setPassword
             when(service.createProfile(eq("Jane"), eq("Smith"), eq(1L))).thenReturn(trainer);
 
             String body = """
@@ -139,10 +139,9 @@ class TrainerControllerTest {
         void getProfile_success() throws Exception {
             Trainee trainee = buildTrainee("John.Doe", "John", "Doe");
             Trainer trainer = buildTrainer(true, trainee);
-            when(service.selectByUsername(USERNAME, PASSWORD)).thenReturn(trainer);
+            when(service.selectByUsername(USERNAME)).thenReturn(trainer);
 
-            mockMvc.perform(get("/trainer/{username}", USERNAME)
-                            .header("X-Password", PASSWORD))
+            mockMvc.perform(get("/trainer/{username}", USERNAME))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.username").value(USERNAME))
                     .andExpect(jsonPath("$.specialization").value("Cardio"))
@@ -151,22 +150,11 @@ class TrainerControllerTest {
         }
 
         @Test
-        @DisplayName("UNHAPPY: auth fails returns 401")
-        void getProfile_authFails() throws Exception {
-            when(service.selectByUsername(USERNAME, PASSWORD))
-                    .thenThrow(new AuthenticationException("Invalid credentials"));
-            mockMvc.perform(get("/trainer/{username}", USERNAME)
-                            .header("X-Password", PASSWORD))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
         @DisplayName("UNHAPPY: not found returns 404")
         void getProfile_notFound() throws Exception {
-            when(service.selectByUsername(USERNAME, PASSWORD))
+            when(service.selectByUsername(USERNAME))
                     .thenThrow(new EntityNotFoundException("Trainer not found"));
-            mockMvc.perform(get("/trainer/{username}", USERNAME)
-                            .header("X-Password", PASSWORD))
+            mockMvc.perform(get("/trainer/{username}", USERNAME))
                     .andExpect(status().isNotFound());
         }
     }
@@ -178,14 +166,13 @@ class TrainerControllerTest {
         @DisplayName("HAPPY: returns 200 with updated profile")
         void update_success() throws Exception {
             Trainer trainer = buildTrainer(true);
-            when(service.updateProfile(eq(USERNAME), eq(PASSWORD), eq("Janet"), eq("Smith"), isNull()))
+            when(service.updateProfile(eq(USERNAME), eq("Janet"), eq("Smith"), any()))
                     .thenReturn(trainer);
 
             String body = """
                     { "firstName": "Janet", "lastName": "Smith", "specializationId": 1, "isActive": true }
                     """;
             mockMvc.perform(put("/trainer/{username}", USERNAME)
-                            .header("X-Password", PASSWORD)
                             .contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.username").value(USERNAME));
@@ -198,7 +185,6 @@ class TrainerControllerTest {
                     { "lastName": "Smith", "isActive": true }
                     """;
             mockMvc.perform(put("/trainer/{username}", USERNAME)
-                            .header("X-Password", PASSWORD)
                             .contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isBadRequest());
         }
@@ -210,23 +196,8 @@ class TrainerControllerTest {
                     { "firstName": "Janet", "lastName": "Smith" }
                     """;
             mockMvc.perform(put("/trainer/{username}", USERNAME)
-                            .header("X-Password", PASSWORD)
                             .contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isBadRequest());
-        }
-
-        @Test
-        @DisplayName("UNHAPPY: auth fails returns 401")
-        void update_authFails() throws Exception {
-            when(service.updateProfile(anyString(), anyString(), anyString(), anyString(), any()))
-                    .thenThrow(new AuthenticationException("Invalid credentials"));
-            String body = """
-                    { "firstName": "Janet", "lastName": "Smith", "isActive": true }
-                    """;
-            mockMvc.perform(put("/trainer/{username}", USERNAME)
-                            .header("X-Password", PASSWORD)
-                            .contentType(MediaType.APPLICATION_JSON).content(body))
-                    .andExpect(status().isUnauthorized());
         }
     }
 
@@ -244,11 +215,10 @@ class TrainerControllerTest {
             training.setTrainingDuration(60);
             training.setTrainee(trainee);
 
-            when(service.getTrainerTrainings(eq(USERNAME), eq(PASSWORD), any(), any(), any()))
+            when(service.getTrainerTrainings(eq(USERNAME), any(), any(), any()))
                     .thenReturn(List.of(training));
 
-            mockMvc.perform(get("/trainer/{username}/trainings", USERNAME)
-                            .header("X-Password", PASSWORD))
+            mockMvc.perform(get("/trainer/{username}/trainings", USERNAME))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].trainingName").value("Morning Cardio"))
                     .andExpect(jsonPath("$[0].trainingType").value("Cardio"))
@@ -259,24 +229,13 @@ class TrainerControllerTest {
         @Test
         @DisplayName("HAPPY: with filters returns 200")
         void getTrainings_withFilters() throws Exception {
-            when(service.getTrainerTrainings(eq(USERNAME), eq(PASSWORD), any(), any(), eq("John")))
+            when(service.getTrainerTrainings(eq(USERNAME), any(), any(), eq("John")))
                     .thenReturn(List.of());
             mockMvc.perform(get("/trainer/{username}/trainings", USERNAME)
-                            .header("X-Password", PASSWORD)
                             .param("fromDate", "2024-01-01")
                             .param("toDate", "2024-12-31")
                             .param("traineeName", "John"))
                     .andExpect(status().isOk());
-        }
-
-        @Test
-        @DisplayName("UNHAPPY: auth fails returns 401")
-        void getTrainings_authFails() throws Exception {
-            when(service.getTrainerTrainings(anyString(), anyString(), any(), any(), any()))
-                    .thenThrow(new AuthenticationException("Invalid credentials"));
-            mockMvc.perform(get("/trainer/{username}/trainings", USERNAME)
-                            .header("X-Password", PASSWORD))
-                    .andExpect(status().isUnauthorized());
         }
     }
 
@@ -286,38 +245,22 @@ class TrainerControllerTest {
         @Test
         @DisplayName("HAPPY: returns 200")
         void setStatus_success() throws Exception {
-            doNothing().when(service).setActiveStatus(USERNAME, PASSWORD, false);
+            doNothing().when(service).setActiveStatus(USERNAME, false);
             String body = """
                     { "isActive": false }
                     """;
             mockMvc.perform(patch("/trainer/{username}/status", USERNAME)
-                            .header("X-Password", PASSWORD)
                             .contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isOk());
-            verify(service).setActiveStatus(USERNAME, PASSWORD, false);
+            verify(service).setActiveStatus(USERNAME, false);
         }
 
         @Test
         @DisplayName("UNHAPPY: missing isActive returns 400")
         void setStatus_missing() throws Exception {
             mockMvc.perform(patch("/trainer/{username}/status", USERNAME)
-                            .header("X-Password", PASSWORD)
                             .contentType(MediaType.APPLICATION_JSON).content("{ }"))
                     .andExpect(status().isBadRequest());
-        }
-
-        @Test
-        @DisplayName("UNHAPPY: auth fails returns 401")
-        void setStatus_authFails() throws Exception {
-            doThrow(new AuthenticationException("Invalid credentials"))
-                    .when(service).setActiveStatus(anyString(), anyString(), anyBoolean());
-            String body = """
-                    { "isActive": true }
-                    """;
-            mockMvc.perform(patch("/trainer/{username}/status", USERNAME)
-                            .header("X-Password", PASSWORD)
-                            .contentType(MediaType.APPLICATION_JSON).content(body))
-                    .andExpect(status().isUnauthorized());
         }
     }
 }

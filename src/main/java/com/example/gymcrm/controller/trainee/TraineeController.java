@@ -5,6 +5,7 @@ import com.example.gymcrm.dto.trainee.TraineeRegistrationResponse;
 import com.example.gymcrm.dto.error.ErrorResponse;
 import com.example.gymcrm.dto.trainee.*;
 import com.example.gymcrm.model.Trainee;
+import com.example.gymcrm.security.SecurityUtils;
 import com.example.gymcrm.service.TraineeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -26,9 +27,11 @@ import java.util.stream.Collectors;
 public class TraineeController {
 
     private final TraineeService service;
+    private final SecurityUtils securityUtils;
 
-    public TraineeController(TraineeService service) {
+    public TraineeController(TraineeService service, SecurityUtils securityUtils) {
         this.service = service;
+        this.securityUtils = securityUtils;
     }
 
     @Operation(summary = "Register a new trainee")
@@ -41,10 +44,9 @@ public class TraineeController {
     @PostMapping
     public ResponseEntity<TraineeRegistrationResponse> register(
             @Valid @RequestBody TraineeRegistrationRequest request) {
-        Trainee trainee = service.createProfile(request.getFirstName(), request.getLastname(),
+        TraineeRegistrationResponse trainee = service.createProfile(request.getFirstName(), request.getLastname(),
                 request.getDateOfBirth(), request.getAddress());
-        return ResponseEntity.ok(new TraineeRegistrationResponse(
-                trainee.getUser().getUsername(), trainee.getUser().getPassword()));
+        return ResponseEntity.ok(trainee);
     }
 
     @Operation(summary = "Get trainee profile")
@@ -58,9 +60,9 @@ public class TraineeController {
     })
     @GetMapping("/{username}")
     public ResponseEntity<TraineeProfileResponse> getProfile(
-            @PathVariable String username,
-            @RequestHeader("X-Password") String password) {
-        Trainee trainee = service.selectByUsername(username, password);
+            @PathVariable String username) {
+        securityUtils.checkOwnership(username);
+        Trainee trainee = service.selectByUsername(username);
         return ResponseEntity.ok(TraineeMapper.toProfileResponse(trainee));
     }
 
@@ -76,16 +78,17 @@ public class TraineeController {
     @PutMapping("/{username}")
     public ResponseEntity<TraineeProfileResponse> updateProfile(
             @PathVariable String username,
-            @RequestHeader("X-Password") String password,
             @Valid @RequestBody TraineeUpdateRequest request) {
 
-        Trainee trainee = service.updateProfile(username, password,
+        securityUtils.checkOwnership(username);
+
+        Trainee trainee = service.updateProfile(username,
                 request.getFirstName(), request.getLastName(),
                 request.getDateOfBirth(), request.getAddress());
 
         if (request.getIsActive() != null
                 && request.getIsActive() != trainee.getUser().isActive()) {
-            service.setActiveStatus(username, password, request.getIsActive());
+            service.setActiveStatus(username, request.getIsActive());
             trainee.getUser().setActive(request.getIsActive());
         }
 
@@ -102,9 +105,10 @@ public class TraineeController {
     })
     @DeleteMapping("/{username}")
     public ResponseEntity<Void> delete(
-            @PathVariable String username,
-            @RequestHeader("X-Password") String password) {
-        service.deleteByUsername(username, password);
+            @PathVariable String username) {
+
+        securityUtils.checkOwnership(username);
+        service.deleteByUsername(username);
         return ResponseEntity.ok().build();
     }
 
@@ -122,11 +126,12 @@ public class TraineeController {
     @PutMapping("/{username}/trainers")
     public ResponseEntity<List<TrainerSummary>> updateTrainers(
             @PathVariable String username,
-            @RequestHeader("X-Password") String password,
             @Valid @RequestBody UpdateTrainersRequest request) {
 
+        securityUtils.checkOwnership(username);
+
         Trainee trainee = service.updateTrainersListByUsername(
-                username, password, request.getTrainerUsernames());
+                username, request.getTrainerUsernames());
 
         List<TrainerSummary> trainers = trainee.getTrainers().stream()
                 .map(TraineeMapper::toTrainerSummary).collect(Collectors.toList());
@@ -143,14 +148,15 @@ public class TraineeController {
     @GetMapping("/{username}/trainings")
     public ResponseEntity<List<TraineeTrainingResponse>> getTrainings(
             @PathVariable String username,
-            @RequestHeader("X-Password") String password,
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) String trainerName,
             @RequestParam(required = false) String trainingType) {
 
+        securityUtils.checkOwnership(username);
+
         List<TraineeTrainingResponse> trainings = service.getTraineeTrainings(
-                        username, password, fromDate, toDate, trainerName, trainingType)
+                        username, fromDate, toDate, trainerName, trainingType)
                 .stream().map(TraineeMapper::toTrainingResponse).collect(Collectors.toList());
         return ResponseEntity.ok(trainings);
     }
@@ -166,9 +172,10 @@ public class TraineeController {
     @PatchMapping("/{username}/status")
     public ResponseEntity<Void> setActiveStatus(
             @PathVariable String username,
-            @RequestHeader("X-Password") String password,
             @Valid @RequestBody ActiveStatusRequest request) {
-        service.setActiveStatus(username, password, request.getIsActive());
+
+        securityUtils.checkOwnership(username);
+        service.setActiveStatus(username, request.getIsActive());
         return ResponseEntity.ok().build();
     }
 
@@ -181,10 +188,11 @@ public class TraineeController {
     })
     @GetMapping("/{username}/unassigned-trainers")
     public ResponseEntity<List<TrainerSummary>> getUnassignedTrainers(
-            @PathVariable("username") String username,
-            @RequestHeader("X-Password") String password) {
+            @PathVariable("username") String username) {
 
-        List<TrainerSummary> trainers = service.getTrainersNotAssigned(username, password)
+        securityUtils.checkOwnership(username);
+
+        List<TrainerSummary> trainers = service.getTrainersNotAssigned(username)
                 .stream().map(TraineeMapper::toTrainerSummary).collect(Collectors.toList());
         return ResponseEntity.ok(trainers);
     }
