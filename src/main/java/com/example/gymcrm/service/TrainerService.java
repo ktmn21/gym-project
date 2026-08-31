@@ -1,5 +1,6 @@
 package com.example.gymcrm.service;
 
+import com.example.gymcrm.dto.trainer.TrainerRegistrationResponse;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
 
@@ -8,7 +9,7 @@ import java.util.List;
 
 public interface TrainerService {
 
-    Trainer createProfile(String firstName, String lastName, Long specializationId);
+    TrainerRegistrationResponse createProfile(String firstName, String lastName, Long specializationId);
 
     Trainer selectByUsername(String username);
 

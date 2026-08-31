@@ -4,6 +4,7 @@ import com.example.gymcrm.dao.TrainerRepository;
 import com.example.gymcrm.dao.TrainingRepository;
 import com.example.gymcrm.dao.TrainingTypeRepository;
 import com.example.gymcrm.dao.UserRepository;
+import com.example.gymcrm.dto.trainer.TrainerRegistrationResponse;
 import com.example.gymcrm.exceptions.AuthenticationException;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
@@ -47,7 +48,7 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional
-    public Trainer createProfile(String firstName, String lastName, Long specializationId) {
+    public TrainerRegistrationResponse createProfile(String firstName, String lastName, Long specializationId) {
         validateRequired(firstName, "firstName");
         validateRequired(lastName, "lastName");
         if (specializationId == null) {
@@ -64,7 +65,6 @@ public class TrainerServiceImpl implements TrainerService {
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setActive(true);
         user.addAuthority(Role.ROLE_TRAINER);
-        user.setRawPassword(rawPassword);
 
         TrainingType specialization = trainingTypeRepository.findAll().stream()
                 .filter(t -> t.getId().equals(specializationId))
@@ -78,7 +78,7 @@ public class TrainerServiceImpl implements TrainerService {
         trainerRepository.save(trainer);
         gymMetrics.incrementTrainerCreated();
         log.info("Created trainer profile username={}", username);
-        return trainer;
+        return new TrainerRegistrationResponse(username, rawPassword);
     }
 
     @Override

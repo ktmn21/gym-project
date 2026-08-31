@@ -4,6 +4,7 @@ import com.example.gymcrm.dao.TraineeRepository;
 import com.example.gymcrm.dao.TrainerRepository;
 import com.example.gymcrm.dao.TrainingRepository;
 import com.example.gymcrm.dao.UserRepository;
+import com.example.gymcrm.dto.trainee.TraineeRegistrationResponse;
 import com.example.gymcrm.exceptions.AuthenticationException;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
@@ -49,7 +50,7 @@ public class TraineeServiceImpl implements TraineeService {
 
     @Override
     @Transactional
-    public Trainee createProfile(String firstName, String lastName, LocalDate dateOfBirth, String address) {
+    public TraineeRegistrationResponse createProfile(String firstName, String lastName, LocalDate dateOfBirth, String address) {
         validateRequired(firstName, "firstName");
         validateRequired(lastName, "lastName");
 
@@ -63,7 +64,6 @@ public class TraineeServiceImpl implements TraineeService {
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setActive(true);
         user.addAuthority(Role.ROLE_TRAINEE);
-        user.setRawPassword(rawPassword);
 
         Trainee trainee = new Trainee();
         trainee.setUser(user);
@@ -73,7 +73,7 @@ public class TraineeServiceImpl implements TraineeService {
         traineeRepository.save(trainee);
         gymMetrics.incrementTraineeCreated();
         log.info("Created trainee profile username={}", username);
-        return trainee;
+        return new TraineeRegistrationResponse(username, rawPassword);
     }
 
     @Override

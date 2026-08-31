@@ -44,12 +44,9 @@ public class TraineeController {
     @PostMapping
     public ResponseEntity<TraineeRegistrationResponse> register(
             @Valid @RequestBody TraineeRegistrationRequest request) {
-        Trainee trainee = service.createProfile(request.getFirstName(), request.getLastname(),
+        TraineeRegistrationResponse trainee = service.createProfile(request.getFirstName(), request.getLastname(),
                 request.getDateOfBirth(), request.getAddress());
-        return ResponseEntity.ok(new TraineeRegistrationResponse(
-                trainee.getUser().getUsername(),
-                trainee.getUser().getRawPassword()
-        ));
+        return ResponseEntity.ok(trainee);
     }
 
     @Operation(summary = "Get trainee profile")

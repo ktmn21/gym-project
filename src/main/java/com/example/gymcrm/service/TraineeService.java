@@ -1,5 +1,6 @@
 package com.example.gymcrm.service;
 
+import com.example.gymcrm.dto.trainee.TraineeRegistrationResponse;
 import com.example.gymcrm.model.Trainee;
 import com.example.gymcrm.model.Trainer;
 import com.example.gymcrm.model.Training;
@@ -10,7 +11,7 @@ import java.util.Set;
 
 public interface TraineeService {
 
-    Trainee createProfile(String firstName, String lastName, LocalDate dateOfBirth, String address);
+    TraineeRegistrationResponse createProfile(String firstName, String lastName, LocalDate dateOfBirth, String address);
 
     Trainee selectByUsername(String username);
 

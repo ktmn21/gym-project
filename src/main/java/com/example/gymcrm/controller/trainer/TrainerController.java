@@ -45,12 +45,9 @@ public class TrainerController {
     @PostMapping
     public ResponseEntity<TrainerRegistrationResponse> register(
             @Valid @RequestBody TrainerRegistrationRequest request) {
-        Trainer trainer = service.createProfile(
+        TrainerRegistrationResponse trainer = service.createProfile(
                 request.getFirstName(), request.getLastName(), request.getSpecializationId());
-        return ResponseEntity.ok(new TrainerRegistrationResponse(
-                trainer.getUser().getUsername(),
-                trainer.getUser().getRawPassword()
-        ));
+        return ResponseEntity.ok(trainer);
     }
 
     @Operation(summary = "Get trainer profile")
