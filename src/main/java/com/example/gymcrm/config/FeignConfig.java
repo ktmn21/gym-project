@@ -13,6 +13,7 @@ public class FeignConfig {
 
     @Bean
     public RequestInterceptor bearerTokenRelayInterceptor() {
+
         return template -> {
             ServletRequestAttributes attrs =
                     (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -22,6 +23,11 @@ public class FeignConfig {
                 if (auth != null) {
                     template.header("Authorization", auth);
                 }
+            }
+
+            String txId = org.slf4j.MDC.get("transactionId");
+            if (txId != null) {
+                template.header("X-Transaction-Id", txId);
             }
         };
     }
