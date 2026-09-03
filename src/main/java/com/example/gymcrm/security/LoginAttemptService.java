@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LoginAttemptService {
 
     private static final int MAX_ATTEMPTS = 3;
-    private static final long BLOCK_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+    private static final long BLOCK_DURATION_MS = 5 * 60 * 1000;
 
     private static class Attempt {
         int count;
@@ -37,7 +37,6 @@ public class LoginAttemptService {
             return false;
         }
         if (Instant.now().isAfter(attempt.blockedUntil)) {
-            // block expired → reset so they can try again
             attempts.remove(username);
             return false;
         }
