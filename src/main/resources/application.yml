@@ -31,3 +31,16 @@ management:
 jwt:
   secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
   expiration-ms: 3600000
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      workloadService:
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s

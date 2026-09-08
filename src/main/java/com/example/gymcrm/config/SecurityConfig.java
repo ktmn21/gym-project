@@ -62,12 +62,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/trainee").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/trainer").permitAll()
                         .requestMatchers("/login", "/logout").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/actuator/**", "/h2-console/**").permitAll()
 
                         .requestMatchers("/trainer/**").hasRole("TRAINER")
                         .requestMatchers("/trainee/**").hasRole("TRAINEE")
@@ -78,6 +79,7 @@ public class SecurityConfig {
 
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
 
         return http.build();
     }

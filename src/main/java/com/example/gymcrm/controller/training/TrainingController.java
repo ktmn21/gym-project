@@ -49,4 +49,10 @@ public class TrainingController {
 
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTraining(@PathVariable Long id) {
+        service.deleteTraining(id);
+        return ResponseEntity.ok().build();
+    }
 }
