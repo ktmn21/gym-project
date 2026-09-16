@@ -1,25 +1,36 @@
 package com.example.gymcrm.service.impl;
 
-
-import com.example.gymcrm.client.WorkloadClient;
 import com.example.gymcrm.dto.trainer.TrainerWorkloadRequest;
 import com.example.gymcrm.service.WorkloadIntegrationService;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class WorkloadIntegrationServiceImpl implements WorkloadIntegrationService {
 
-    private final WorkloadClient workloadClient;
+    private static final Logger log = LoggerFactory.getLogger(WorkloadIntegrationServiceImpl.class);
+
+    private final JmsTemplate jmsTemplate;
+
+    @Value("${workload.queue.name}")
+    private String queueName;
+
+    public WorkloadIntegrationServiceImpl(JmsTemplate jmsTemplate) {
+        this.jmsTemplate = jmsTemplate;
+    }
 
     @Override
-    @CircuitBreaker(name = "workloadService", fallbackMethod = "fallback")
     public void sendWorkload(TrainerWorkloadRequest request) {
-        workloadClient.sendWorkload(request);
-    }
-    private void fallback(TrainerWorkloadRequest request, Throwable t) {
-        System.err.println("Workload service unavailable: " + t.getMessage());
+        try {
+            jmsTemplate.convertAndSend(queueName, request);
+            log.info("Published workload message: trainer={}, action={}",
+                    request.getUsername(), request.getActionType());
+        } catch (Exception e) {
+            log.error("Failed to publish workload message for trainer={}: {}",
+                    request.getUsername(), e.getMessage(), e);
+        }
     }
 }
