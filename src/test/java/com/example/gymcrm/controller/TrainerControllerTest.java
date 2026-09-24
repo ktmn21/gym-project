@@ -80,9 +80,8 @@ class TrainerControllerTest {
         @Test
         @DisplayName("HAPPY: returns 200 with credentials")
         void register_success() throws Exception {
-            Trainer trainer = buildTrainer(true);
-            trainer.getUser().setRawPassword("genPass1");   // ← raw, not setPassword
-            when(service.createProfile(eq("Jane"), eq("Smith"), eq(1L))).thenReturn(trainer);
+            when(service.createProfile(eq("Jane"), eq("Smith"), eq(1L)))
+                    .thenReturn(new com.example.gymcrm.dto.trainer.TrainerRegistrationResponse(USERNAME, "genPass1"));
 
             String body = """
                     { "firstName": "Jane", "lastName": "Smith", "specializationId": 1 }
