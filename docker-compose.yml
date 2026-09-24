@@ -19,5 +19,15 @@ services:
       timeout: 5s
       retries: 5
 
+  activemq:
+    image: apache/activemq-classic:5.18.3
+    container_name: activemq
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    environment:
+      ACTIVEMQ_ADMIN_LOGIN: admin
+      ACTIVEMQ_ADMIN_PASSWORD: admin
+
 volumes:
   gym_pg_data:
