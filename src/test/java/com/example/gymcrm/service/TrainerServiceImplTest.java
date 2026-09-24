@@ -4,6 +4,7 @@ import com.example.gymcrm.dao.TrainerRepository;
 import com.example.gymcrm.dao.TrainingRepository;
 import com.example.gymcrm.dao.TrainingTypeRepository;
 import com.example.gymcrm.dao.UserRepository;
+import com.example.gymcrm.dto.trainer.TrainerRegistrationResponse;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.metrics.GymMetrics;
@@ -89,18 +90,14 @@ class TrainerServiceImplTest {
             when(trainingTypeRepository.findAll()).thenReturn(List.of(cardio));
             when(trainerRepository.save(any(Trainer.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Trainer result = service.createProfile("John", "Doe", SPEC_ID);
+            TrainerRegistrationResponse result = service.createProfile("John", "Doe", SPEC_ID);
 
             assertNotNull(result);
-            assertEquals(USERNAME, result.getUser().getUsername());
-            assertEquals(HASHED_PASSWORD, result.getUser().getPassword());
-            assertEquals(RAW_PASSWORD, result.getUser().getRawPassword());
-            assertTrue(result.getUser().isActive());
-            assertEquals(cardio, result.getSpecialization());
-            assertTrue(result.getUser().getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority() == Role.ROLE_TRAINER));
+            assertEquals(USERNAME, result.getUsername());
+            assertEquals(RAW_PASSWORD, result.getPassword());
             verify(trainerRepository).save(any(Trainer.class));
             verify(gymMetrics).incrementTrainerCreated();
+            verify(passwordEncoder).encode(RAW_PASSWORD);
         }
 
         @Test

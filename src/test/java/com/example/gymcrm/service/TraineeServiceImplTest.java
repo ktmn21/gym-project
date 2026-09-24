@@ -4,6 +4,7 @@ import com.example.gymcrm.dao.TraineeRepository;
 import com.example.gymcrm.dao.TrainerRepository;
 import com.example.gymcrm.dao.TrainingRepository;
 import com.example.gymcrm.dao.UserRepository;
+import com.example.gymcrm.dto.trainee.TraineeRegistrationResponse;
 import com.example.gymcrm.exceptions.EntityNotFoundException;
 import com.example.gymcrm.exceptions.ValidationException;
 import com.example.gymcrm.metrics.GymMetrics;
@@ -86,19 +87,15 @@ class TraineeServiceImplTest {
             when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
             when(traineeRepository.save(any(Trainee.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            Trainee result = service.createProfile("John", "Doe",
+            TraineeRegistrationResponse result = service.createProfile("John", "Doe",
                     LocalDate.of(1990, 1, 1), "Street 1");
 
             assertNotNull(result);
-            assertEquals(USERNAME, result.getUser().getUsername());
-            assertEquals(HASHED_PASSWORD, result.getUser().getPassword());
-            assertEquals(RAW_PASSWORD, result.getUser().getRawPassword());
-            assertTrue(result.getUser().isActive());
-            assertEquals("Street 1", result.getAddress());
-            assertTrue(result.getUser().getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority() == Role.ROLE_TRAINEE));
+            assertEquals(USERNAME, result.getUsername());
+            assertEquals(RAW_PASSWORD, result.getPassword());
             verify(traineeRepository).save(any(Trainee.class));
             verify(gymMetrics).incrementTraineeCreated();
+            verify(passwordEncoder).encode(RAW_PASSWORD);
         }
 
         @Test
