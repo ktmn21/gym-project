@@ -1,0 +1,24 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jms.JmsAutoConfiguration
+      - org.springframework.boot.autoconfigure.jms.activemq.ActiveMQAutoConfiguration
+  datasource:
+    url: jdbc:h2:mem:gymcrm;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+  sql:
+    init:
+      mode: always
+
+logging:
+  file:
+    name: /app/logs/application.log
