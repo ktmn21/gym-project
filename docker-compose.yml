@@ -1,4 +1,14 @@
 version: "3.8"
+
+networks:
+  gym-net:
+    name: gym-net
+    driver: bridge
+
+volumes:
+  gym_pg_data:
+  mongo_data:
+
 services:
   gym-postgres:
     image: postgres:16
@@ -14,20 +24,78 @@ services:
       - gym_pg_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U gym_user -d gymcrm" ]
+      test: ["CMD-SHELL", "pg_isready -U gym_user -d gymcrm"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    networks:
+      - gym-net
+
+  mongo:
+    image: mongo:7
+    container_name: gym-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: workloaddb
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - gym-net
 
   activemq:
     image: apache/activemq-classic:5.18.3
     container_name: activemq
+    restart: unless-stopped
     ports:
       - "61616:61616"
       - "8161:8161"
     environment:
       ACTIVEMQ_ADMIN_LOGIN: admin
       ACTIVEMQ_ADMIN_PASSWORD: admin
+    networks:
+      - gym-net
 
-volumes:
-  gym_pg_data:
+  gym-crm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gym-crm:latest
+    container_name: gym-crm
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      LOG_FILE: /app/logs/application.log
+    depends_on:
+      gym-postgres:
+        condition: service_healthy
+      activemq:
+        condition: service_started
+    networks:
+      - gym-net
+
+  workload-service:
+    build:
+      context: ../../workload_service
+      dockerfile: Dockerfile
+    image: workload-service:latest
+    container_name: workload-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      LOG_FILE: /app/logs/application.log
+    depends_on:
+      mongo:
+        condition: service_healthy
+      activemq:
+        condition: service_started
+    networks:
+      - gym-net

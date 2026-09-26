@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  gym-crm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gym-crm:standalone
+    container_name: gym-crm-standalone
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: standalone
+      LOG_FILE: /app/logs/application.log
+
+  workload-service:
+    build:
+      context: ../../workload_service
+      dockerfile: Dockerfile
+    image: workload-service:standalone
+    container_name: workload-service-standalone
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: standalone
+      LOG_FILE: /app/logs/application.log
